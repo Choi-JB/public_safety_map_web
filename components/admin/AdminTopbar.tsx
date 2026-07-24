@@ -2,9 +2,13 @@
 
 "use client";
 
-import { useAdminStore } from "@/store/adminStore";
 import type { AdminTab } from "@/lib/api/admin";
 import styles from "./admin.module.css";
+
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import { useAdminStore } from "@/store/adminStore";
+
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: "dashboard", label: "대시보드" },
@@ -18,6 +22,13 @@ export function AdminTopbar() {
   const tab = useAdminStore((s) => s.tab);
   const setTab = useAdminStore((s) => s.setTab);
 
+  const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
   return (
     <header className={styles.topbar}>
       <div className={styles.brand}>공공안전지도 관리자</div>
@@ -35,7 +46,7 @@ export function AdminTopbar() {
       </nav>
       <div className={styles.userMeta}>
         <span>관리자</span>
-        <button type="button" className={styles.button} disabled title="인증 연동 후 사용">
+        <button type="button" className={styles.button} onClick={handleLogout} title="인증 연동 후 사용">
           로그아웃
         </button>
       </div>

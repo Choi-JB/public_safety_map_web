@@ -137,6 +137,7 @@ function buildQuery(params: Record<string, string | number | undefined>) {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
+    credentials: "include",
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -166,6 +167,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return undefined as T;
 }
 
+export type AdminMe = { id: string; role: string };
+
+/**
+ * 관리자 정보 조회
+ * @returns 관리자 정보
+ */
+export async function fetchAdminMe() {
+  return request<AdminMe>("/admin/me");
+}
+
 export async function fetchSummary() {
   return request<AdminSummary>("/admin/summary");
 }
@@ -182,6 +193,7 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
 
   const res = await fetch(`${getBaseUrl()}/admin/reports${qs}`, {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
   });
 
   let json: (ApiResponse<AdminReport[]> & { types?: string[] }) | ApiResponse<AdminReport[]>;
@@ -243,6 +255,7 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
 
   const res = await fetch(`${getBaseUrl()}/admin/events${qs}`, {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
   });
 
   let json: ApiResponse<AdminCityEvent[]> & { types?: string[] };
