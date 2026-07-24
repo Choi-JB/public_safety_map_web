@@ -1,0 +1,103 @@
+/* 담당: 피드백/관리자팀 — 로그인 페이지 */
+
+.page {
+  --login-bg: #eef1f4;
+  --login-surface: #ffffff;
+  --login-border: #cfd6de;
+  --login-text: #243041;
+  --login-muted: #6b7785;
+  --login-accent: #2f5d7c;
+  --login-danger: #9b3b3b;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--login-bg);
+  color: var(--login-text);
+  font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+}
+
+.card {
+  width: min(400px, 100%);
+  background: var(--login-surface);
+  border: 1px solid var(--login-border);
+  border-radius: 8px;
+  padding: 28px 24px;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--login-muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--login-muted);
+}
+
+.field input {
+  border: 1px solid var(--login-border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--login-text);
+  background: #fff;
+}
+
+.field input:focus {
+  outline: 2px solid color-mix(in srgb, var(--login-accent) 35%, white);
+  outline-offset: 1px;
+}
+
+.button {
+  margin-top: 4px;
+  border: 1px solid var(--login-accent);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--login-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e2b4b4;
+  border-radius: 4px;
+  background: #fbf2f2;
+  color: var(--login-danger);
+  font-size: 13px;
+}
+
+.hint {
+  margin-top: 12px;
+  color: var(--login-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
