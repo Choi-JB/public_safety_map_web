@@ -27,3 +27,15 @@ export type GridBoundsQuery = {
     infra_count: number;
     safety_grade: string | null;
   };
+
+/** 인프라 타입 (쿼리 ?type=) */
+export type InfraType = "CCTV" | "경찰서" | "소방서" | "편의점";
+
+/** GET /grids/{id}/infrastructures 항목 */
+export type InfrastructureItem = {
+  id: number;
+  type: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+};
