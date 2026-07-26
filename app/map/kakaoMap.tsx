@@ -13,7 +13,10 @@ const INFRA_TYPES: Array<InfraType | null> = [
   "경찰서",
   "소방서",
   "편의점",
-];
+];  
+
+// 지도 축소 제한
+const MAX_ZOOM_OUT = 7;
 
 function infraTypeLabel(t: InfraType | null) {
   return t === null ? "전체" : t;
@@ -51,8 +54,13 @@ export default function KakaoMap() {
         const center = new kakao.maps.LatLng(37.5665, 126.978);
         const map = new kakao.maps.Map(containerRef.current, {
           center,
-          level: 5,
+          level: 6,
         });
+
+        map.setMaxLevel(MAX_ZOOM_OUT);
+
+        
+
         mapRef.current = map;
 
         const updateBounds = () => {
@@ -240,3 +248,5 @@ export default function KakaoMap() {
     </div>
   );
 }
+
+
