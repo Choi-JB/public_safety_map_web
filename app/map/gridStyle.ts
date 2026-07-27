@@ -1,4 +1,4 @@
-const CELL = 0.005
+const CELL = 0.01
 const HALF = CELL / 2;
 
 export function gridRectanglePath(lat: number, lng: number) {
