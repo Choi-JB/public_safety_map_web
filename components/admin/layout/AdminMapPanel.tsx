@@ -2,15 +2,31 @@
 
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/store/adminStore";
+import { BackIcon } from "../shared/BackIcon";
 import styles from "../admin.module.css";
 
 export function AdminMapPanel() {
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const router = useRouter();
+
+  const backToMap = () => {
+    router.push("/map");
+  };
 
   return (
     <section className={styles.mapCard} aria-label="관리자 지도 영역">
-      <div className={styles.mapHeader}>지도</div>
+      <div className={styles.mapHeader}>
+        <button
+          type="button"
+          className={styles.mapBackButton}
+          onClick={backToMap}
+        >
+          <BackIcon size={18} />
+          <span>지도 화면으로 돌아가기</span>
+        </button>
+      </div>
       <div className={styles.mapBody}>
         {mapFocus ? (
           <>

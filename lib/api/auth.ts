@@ -7,12 +7,15 @@ function getBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4100";
 }
 
+/** 로그인 유저 정보 */
 export type LoginUser = {
   id: number;
   nickname: string | null;
   role: string;
+  email: string;
 };
 
+/** 로그인 결과 */
 export type LoginResult =
   | { authType: "session"; user: LoginUser }
   | { access_token: string; user: LoginUser };
@@ -51,7 +54,7 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   throw new Error("로그인 응답이 올바르지 않습니다.");
 }
 
-/** 로그아웃 API (관리자 세션 종료) */
+/** 로그아웃 API (일반 유저 JWT 폐기, 관리자 세션 종료) */
 export async function logoutApi(): Promise<void> {
     const res = await fetch(`${getBaseUrl()}/auth/logout`, {
       method: "POST",
