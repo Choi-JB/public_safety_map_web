@@ -1,3 +1,5 @@
+import type{ApiResponse} from "./types";
+
 // 담당: 공통기반
 // 작성자 : 최정봉
 // 내용 : 클라이언트 요청 전용 API (GET, POST, PATCH, DELETE)
