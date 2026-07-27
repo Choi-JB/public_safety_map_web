@@ -29,7 +29,7 @@ export function loadKakaoMap(): Promise<typeof window.kakao> {
     const script = document.createElement("script");
     script.id = SCRIPT_ID;
     script.async = true;
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services`;
     script.onload = () => {
       window.kakao.maps.load(() => resolve(window.kakao));
     };
