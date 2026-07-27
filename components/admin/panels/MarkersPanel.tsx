@@ -5,7 +5,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { CITY_EVENT_TYPES, REPORT_TYPES } from "@/lib/api/admin";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 const emptyForm = {
   type: "교통사고" as string,

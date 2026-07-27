@@ -5,8 +5,8 @@
 import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { CITY_EVENT_TYPES } from "@/lib/api/admin";
-import { CloseIcon } from "./CloseIcon";
-import styles from "./admin.module.css";
+import { CloseIcon } from "../shared/CloseIcon";
+import styles from "../admin.module.css";
 
 const DEFAULT_START_TIME = "09:00";
 const DEFAULT_END_TIME = "18:00";

@@ -4,7 +4,7 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 export function DashboardPanel() {
   const summary = useAdminStore((s) => s.summary);

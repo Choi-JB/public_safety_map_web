@@ -35,32 +35,37 @@ web/
 │   ├── ui/                        # 공통기반
 │   ├── layout/                    # 공통기반
 │   ├── shared/                    # 여러 팀 공용 (공통기반 + 필요한 팀 협의)
+│   │   └── AuthHydrator.tsx       # 공통기반 (세션/토큰 하이드레이션)
 │   ├── login/                     # 피드백/관리자팀
 │   │   ├── LoginShell.tsx
 │   │   ├── LoginForm.tsx
 │   │   └── login.module.css
 │   └── admin/                     # 피드백/관리자팀
 │       ├── AdminShell.tsx
-│       ├── AdminTopbar.tsx
-│       ├── AdminMapPanel.tsx
-│       ├── DashboardPanel.tsx
-│       ├── ReportsPanel.tsx
-│       ├── FeedbacksPanel.tsx
-│       ├── MarkersPanel.tsx
-│       ├── CityEventsPanel.tsx
-│       ├── CityEventModal.tsx
-│       ├── DeleteConfirmModal.tsx
-│       ├── DetailModals.tsx
-│       ├── ImagePreviewModal.tsx
-│       ├── FilterChecks.tsx
-│       ├── MapMoveButton.tsx
-│       ├── Pagination.tsx
-│       ├── SafetyBadge.tsx
-│       ├── formatDate.ts
-│       ├── CloseIcon.tsx
-│       ├── RefreshIcon.tsx
-│       ├── TrashIcon.tsx
-│       └── admin.module.css
+│       ├── admin.module.css
+│       ├── layout/
+│       │   ├── AdminTopbar.tsx
+│       │   └── AdminMapPanel.tsx
+│       ├── panels/
+│       │   ├── DashboardPanel.tsx
+│       │   ├── ReportsPanel.tsx
+│       │   ├── FeedbacksPanel.tsx
+│       │   ├── MarkersPanel.tsx
+│       │   └── CityEventsPanel.tsx
+│       ├── modals/
+│       │   ├── DeleteConfirmModal.tsx
+│       │   ├── ImagePreviewModal.tsx
+│       │   ├── CityEventModal.tsx
+│       │   └── DetailModals.tsx
+│       └── shared/
+│           ├── FilterChecks.tsx
+│           ├── Pagination.tsx
+│           ├── MapMoveButton.tsx
+│           ├── SafetyBadge.tsx
+│           ├── formatDate.ts
+│           ├── CloseIcon.tsx
+│           ├── RefreshIcon.tsx
+│           └── TrashIcon.tsx
 ├── lib/
 │   └── api/
 │       ├── client.ts              # 공통기반 (fetch 래퍼)

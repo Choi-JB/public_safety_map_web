@@ -3,7 +3,7 @@
 "use client";
 
 import { useAdminStore } from "@/store/adminStore";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 export function DeleteConfirmModal() {
   const deleteTarget = useAdminStore((s) => s.deleteTarget);

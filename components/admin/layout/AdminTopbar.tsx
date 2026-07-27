@@ -3,7 +3,7 @@
 "use client";
 
 import type { AdminTab } from "@/lib/api/admin";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";

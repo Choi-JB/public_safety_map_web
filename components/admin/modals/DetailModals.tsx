@@ -3,7 +3,7 @@
 "use client";
 
 import { useAdminStore } from "@/store/adminStore";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 function formatDate(value: string) {
   try {
