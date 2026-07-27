@@ -111,6 +111,23 @@
   font-weight: 600;
 }
 
+.mapBackButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mapBackButton:hover {
+  color: var(--admin-accent);
+}
+
 .mapBody {
   flex: 1;
   display: grid;

@@ -101,3 +101,90 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+/* 지도 우상단 로그인 / 내정보 */
+
+.mapAuthRoot {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+}
+
+.mapAuthPlaceholder {
+  width: 72px;
+  height: 36px;
+}
+
+.mapAuthButton {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  color: #243041;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.userMenuPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(240px, calc(100vw - 24px));
+  padding: 14px;
+  border: 1px solid #cfd6de;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  color: #243041;
+}
+
+.userMenuName {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.userMenuMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7785;
+}
+
+.userMenuLink {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f5d7c;
+  text-decoration: none;
+}
+
+.userMenuLink:hover {
+  text-decoration: underline;
+}
+
+.userMenuLogout {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid #cfd6de;
+  border-radius: 6px;
+  background: #f7f8fa;
+  color: #243041;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.userMenuLogout:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

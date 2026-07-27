@@ -10,6 +10,7 @@ import type {
   InfraType,
   ReportItem,
 } from "@/lib/api/types";
+import { AuthEntry } from "@/components/login/AuthEntry";
 import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
@@ -601,6 +602,8 @@ useEffect(() => {
           </span>
         )}
       </div>
+
+      <AuthEntry />
 
       <GridInfoCard />
     </div>

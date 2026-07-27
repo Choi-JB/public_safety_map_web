@@ -37,6 +37,9 @@ web/
 │   ├── shared/                    # 여러 팀 공용 (공통기반 + 필요한 팀 협의)
 │   │   └── AuthHydrator.tsx       # 공통기반 (세션/토큰 하이드레이션)
 │   ├── login/                     # 피드백/관리자팀
+│   │   ├── AuthEntry.tsx
+│   │   ├── LoginButton.tsx
+│   │   ├── UserMenu.tsx
 │   │   ├── LoginShell.tsx
 │   │   ├── LoginForm.tsx
 │   │   └── login.module.css

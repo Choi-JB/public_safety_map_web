@@ -6,17 +6,20 @@ import { persist } from "zustand/middleware";
 import { loginApi, logoutApi, type LoginResult } from "@/lib/api/auth";
 import { fetchAdminMe } from "@/lib/api/admin";
 
+/** 유저 정보 */
 export type AuthUser = {
   id: number | null;
   nickname: string | null;
   role: string | null;
+  email: string | null;
 };
 
+/** 인증 상태 */
 type AuthState = {
   user: AuthUser | null;
-  /** 일반 유저 JWT (추후 연동) */
+  /** 일반 유저 JWT */
   accessToken: string | null;
-  /** 관리자 세션 식별용 (추후 연동) */
+  /** 관리자 세션 식별용 */
   sessionId: string | null;
   loading: boolean;
   error: string | null;
@@ -115,11 +118,16 @@ export const useAuthStore = create<AuthState>()(
     checkSession: async () => {
       try {
         const me = await fetchAdminMe();
-        set({
-          user: { id: Number(me.id), nickname: null, role: me.role },
+        set((prev) => ({
+          user: { 
+            id: Number(me.id), 
+            nickname: me.nickname ?? prev.user?.nickname ?? null, 
+            role: me.role, 
+            email: me.email ?? prev.user?.email ?? null
+         },
           authType: "session",
           sessionId: "active",
-        });
+        }));
         return true;
       } catch {
         set({
