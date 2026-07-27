@@ -125,6 +125,11 @@ function getBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4100";
 }
 
+/**
+ * 쿼리 문자열 생성
+ * @param params 쿼리 파라미터
+ * @returns 쿼리 문자열
+ */
 function buildQuery(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -135,6 +140,12 @@ function buildQuery(params: Record<string, string | number | undefined>) {
   return qs ? `?${qs}` : "";
 }
 
+/**
+ * 요청 호출
+ * @param path 요청 경로
+ * @param init 요청 옵션
+ * @returns 요청 결과 (JSON 파싱 결과)
+ */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     credentials: "include",
@@ -145,6 +156,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
+  /**
+   * 응답 파싱
+   * @param res 응답
+   * @returns 응답 결과 (JSON 파싱 결과)
+   */
   let json: ApiResponse<T>;
   try {
     json = (await res.json()) as ApiResponse<T>;
@@ -152,6 +168,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error("서버 응답을 파싱하지 못했습니다.");
   }
 
+  /**
+   * 응답 검증
+   * @param res 응답
+   * @param json 응답 결과 (JSON 파싱 결과)
+   * @throws 응답 검증 실패 시 예외 발생
+   */
   if (!res.ok || ("success" in json && json.success === false)) {
     const message =
       "message" in json && json.message
@@ -160,6 +182,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
 
+  /**
+   * 응답 데이터 반환
+   * @param json 응답 결과 (JSON 파싱 결과)
+   * @returns 응답 데이터
+   */
   if ("data" in json) {
     return json.data as T;
   }
@@ -167,6 +194,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return undefined as T;
 }
 
+/**
+ * 관리자 정보 타입
+ * @param id 관리자 ID
+ * @param role 관리자 역할
+ */
 export type AdminMe = { id: string; role: string };
 
 /**
@@ -177,10 +209,19 @@ export async function fetchAdminMe() {
   return request<AdminMe>("/admin/me");
 }
 
+/**
+ * 관리자 요약 정보 조회
+ * @returns 관리자 요약 정보 (JSON 파싱 결과)
+ */
 export async function fetchSummary() {
   return request<AdminSummary>("/admin/summary");
 }
 
+/**
+ * 신고 목록 조회
+ * @param query 조회 조건
+ * @returns 신고 목록 (JSON 파싱 결과)
+ */
 export async function fetchReports(query: ListQuery): Promise<ReportsListResult> {
   const qs = buildQuery({
     page: query.page,
@@ -191,6 +232,11 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
   });
 
+  /**
+   * 신고 목록 조회
+   * @param qs 쿼리 문자열
+   * @returns 신고 목록 (JSON 파싱 결과)
+   */
   const res = await fetch(`${getBaseUrl()}/admin/reports${qs}`, {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -217,6 +263,11 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
   };
 }
 
+/**
+ * 신고 삭제
+ * @param id 신고 ID
+ * @returns 신고 삭제 결과 (JSON 파싱 결과)
+ */
 export async function deleteReport(id: number) {
   return request<undefined>("/admin/delete-report", {
     method: "POST",
@@ -224,6 +275,11 @@ export async function deleteReport(id: number) {
   });
 }
 
+/**
+ * 피드백 목록 조회
+ * @param query 조회 조건
+ * @returns 피드백 목록 (JSON 파싱 결과)
+ */
 export async function fetchFeedbacks(query: ListQuery) {
   const qs = buildQuery({
     page: query.page,
@@ -236,6 +292,11 @@ export async function fetchFeedbacks(query: ListQuery) {
   return request<AdminFeedback[]>(`/admin/feedbacks${qs}`);
 }
 
+/**
+ * 피드백 삭제
+ * @param id 피드백 ID
+ * @returns 피드백 삭제 결과 (JSON 파싱 결과)
+ */
 export async function deleteFeedback(id: number) {
   return request<undefined>("/admin/delete-feedback", {
     method: "POST",
@@ -243,6 +304,11 @@ export async function deleteFeedback(id: number) {
   });
 }
 
+/**
+ * 이벤트 목록 조회
+ * @param query 조회 조건
+ * @returns 이벤트 목록 (JSON 파싱 결과)
+ */
 export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
   const qs = buildQuery({
     page: query.page,
@@ -253,6 +319,11 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
   });
 
+  /**
+   * 이벤트 목록 조회
+   * @param qs 쿼리 문자열
+   * @returns 이벤트 목록 (JSON 파싱 결과)
+   */
   const res = await fetch(`${getBaseUrl()}/admin/events${qs}`, {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -283,6 +354,11 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
   };
 }
 
+/**
+ * 이벤트 생성
+ * @param payload 이벤트 생성 페이로드
+ * @returns 이벤트 생성 결과 (JSON 파싱 결과)
+ */
 export async function createEvent(payload: CreateEventPayload) {
   // 백엔드 구현 이슈: 날짜는 query도 함께 전달해야 저장됨
   const qs = buildQuery({
@@ -295,6 +371,11 @@ export async function createEvent(payload: CreateEventPayload) {
   });
 }
 
+/**
+ * 이벤트 수정
+ * @param payload 이벤트 수정 페이로드
+ * @returns 이벤트 수정 결과 (JSON 파싱 결과)
+ */
 export async function updateEvent(payload: UpdateEventPayload) {
   const qs = buildQuery({
     start_at: payload.start_at,
@@ -306,6 +387,11 @@ export async function updateEvent(payload: UpdateEventPayload) {
   });
 }
 
+/**
+ * 이벤트 삭제
+ * @param id 이벤트 ID
+ * @returns 이벤트 삭제 결과 (JSON 파싱 결과)
+ */
 export async function deleteEvent(id: number) {
   return request<undefined>("/admin/delete-event", {
     method: "POST",

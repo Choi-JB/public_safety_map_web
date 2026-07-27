@@ -1,6 +1,6 @@
 // 담당: 공통기반
 // 작성자 : 최정봉
-// 내용 : 로그인 API
+// 내용 : 로그인 API (로그인, 로그아웃 전용)
 import type { ApiResponse } from "./types";
 
 function getBaseUrl() {

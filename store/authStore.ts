@@ -2,6 +2,7 @@
 // 작성자 : 최정봉
 // 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { loginApi, logoutApi, type LoginResult } from "@/lib/api/auth";
 import { fetchAdminMe } from "@/lib/api/admin";
 
@@ -40,79 +41,103 @@ type AuthState = {
   logout: () => Promise<void>;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  accessToken: null,
-  sessionId: null,
-  loading: false,
-  error: null,
-  authType: null,
-  clearError: () => set({ error: null }),
+export const useAuthStore = create<AuthState>()(
+  persist((set) => ({
+    user: null,
+    accessToken: null,
+    sessionId: null,
+    loading: false,
+    error: null,
+    authType: null,
+    clearError: () => set({ error: null }),
 
-  login: async (email, password) => {
-    set({ loading: true, error: null });
-    try {
-      const result: LoginResult = await loginApi(email, password);
+    login: async (email, password) => {
+      set({ loading: true, error: null });
+      try {
+        const result: LoginResult = await loginApi(email, password);
 
-      if ("authType" in result) {
-        // 관리자 — 세션(httpOnly 쿠키)으로 인증됨.
-        // 쿠키 값 자체는 JS에서 읽을 수 없어 "active" 마커만 저장.
+        if ("authType" in result) {
+          // 관리자 — 세션(httpOnly 쿠키)으로 인증됨.
+          // 쿠키 값 자체는 JS에서 읽을 수 없어 "active" 마커만 저장.
+          set({
+            loading: false,
+            user: result.user,
+            accessToken: null,
+            sessionId: "active",
+            authType: "session"
+          });
+
+        } else {
+          // 일반 유저 — JWT
+          set({
+            loading: false,
+            user: result.user,
+            accessToken: result.access_token,
+            sessionId: null,
+            authType: "jwt"
+          });
+        }
+      } catch (err) {
         set({
           loading: false,
-          user: result.user,
+          user: null,
           accessToken: null,
-          sessionId: "active",
-          authType: "session"
-        });
-
-      } else {
-        // 일반 유저 — JWT
-        set({
-          loading: false,
-          user: result.user,
-          accessToken: result.access_token,
           sessionId: null,
-          authType: "jwt"
+          error: err instanceof Error ? err.message : "로그인에 실패했습니다."
         });
       }
-    } catch (err) {
+    },
+
+    logout: async () => {
+      /**
+       * 서버에 폐기 요청
+       *  - 관리자: 세션 종료 destroy
+       *  - 일반 유저: refresh token 폐기
+       */
+      try{
+        await logoutApi();
+      } catch (err) {
+        console.error("[logout]", err);
+      }
+      
+      /**
+       * 상태 초기화
+       */
       set({
-        loading: false,
         user: null,
         accessToken: null,
         sessionId: null,
-        error: err instanceof Error ? err.message : "로그인에 실패했습니다."
+        authType: null,
+        error: null,
+        loading: false,
       });
-    }
-  },
-
-  logout: async () => {
-    try{
-      await logoutApi();
-    }catch(err){
-      console.error("[logout]", err);
-    }
-    set({
-      user: null,
-      accessToken: null,
-      sessionId: null,
-      authType: null,
-      error: null,
-      loading: false,
-    });
-  },
-  checkSession: async () => {
-    try {
-      const me = await fetchAdminMe();
-      set({
-        user: { id: Number(me.id), nickname: null, role: me.role },
-        authType: "session",
-        sessionId: "active",
-      });
-      return true;
-    } catch {
-      set({ user: null, authType: null, sessionId: null, accessToken: null });
-      return false;
-    }
-  },
-}));
+    },
+    checkSession: async () => {
+      try {
+        const me = await fetchAdminMe();
+        set({
+          user: { id: Number(me.id), nickname: null, role: me.role },
+          authType: "session",
+          sessionId: "active",
+        });
+        return true;
+      } catch {
+        set({
+          user: null,
+          authType: null,
+          sessionId: null,
+          accessToken: null,
+          error: "세션이 만료되었습니다. 다시 로그인해주세요."
+        });
+        return false;
+      }
+    },
+  }), {
+    name: "auth-storage",
+    skipHydration: true,
+    partialize: (state) => ({
+      accessToken: state.accessToken,
+      user: state.user,
+      authType: state.authType,
+    }),
+  }));
