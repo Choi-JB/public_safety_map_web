@@ -1,5 +1,20 @@
 // 담당: 공통기반
 
+
+//report
+export type ReportItem = {
+  id: number;
+  type: string | null;
+  lat: number | null;
+  lng: number | null;
+  description: string | null;
+  img_url: string | null;
+  user_nickname: string | null;
+  created_at: string | null;
+  expire_at: string | null;
+  is_admin_posted: boolean;
+};
+
 //city-envents
 export type CityEventItem = {
   id: number;

@@ -1,9 +1,5 @@
 // 담당: 지도표시팀
 import { create } from "zustand";
-
-
-
-
 import type {
   GridBoundsQuery,
   GridDetail,
@@ -11,6 +7,7 @@ import type {
   InfraType,
   InfrastructureItem,
   CityEventItem,
+  ReportItem,
 } from "@/lib/api/types";
 
 export type MapBounds = GridBoundsQuery;
@@ -41,6 +38,11 @@ type MapState = {
   cityEventsLoading: boolean;
   setCityEvents: (items: CityEventItem[]) => void;
   setCityEventsLoading: (loading: boolean) => void;
+  //reports
+  reports: ReportItem[];
+  reportsLoading: boolean;
+  setReports: (items: ReportItem[]) => void;
+  setReportsLoading: (loading: boolean) => void;
 };
 
 export const useMapStore = create<MapState>((set) => ({
@@ -70,4 +72,9 @@ export const useMapStore = create<MapState>((set) => ({
   setCityEventsLoading: (cityEventsLoading) => set({ cityEventsLoading }),
   clearSelection: () =>
     set({ selectedGridId: null, infrastructures: [], gridDetail: null }),
+
+  reports: [],
+  reportsLoading: false,
+  setReports: (reports) => set({ reports }),
+  setReportsLoading: (reportsLoading) => set({ reportsLoading }),
 }));

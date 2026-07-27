@@ -8,6 +8,7 @@ import type {
   GridItem,
   InfrastructureItem,
   InfraType,
+  ReportItem,
 } from "@/lib/api/types";
 import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
@@ -67,6 +68,12 @@ export default function KakaoMap() {
   const setGridDetail = useMapStore((s) => s.setGridDetail);
   const setDetailLoading = useMapStore((s) => s.setDetailLoading);
   const clearSelection = useMapStore((s) => s.clearSelection);
+
+  //reports
+  const reportMarkersRef = useRef<any[]>([]);
+  const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
+  const setReports = useMapStore((s) => s.setReports);
+  const setReportsLoading = useMapStore((s) => s.setReportsLoading);
 
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -299,6 +306,77 @@ useEffect(() => {
     cancelled = true;
   };
 }, [bounds,setGridsLoading, setCityEvents, setCityEventsLoading]);
+
+// 2.6) viewport reports
+useEffect(() => {
+  if (!bounds || !mapRef.current || !kakaoRef.current) return;
+
+  let cancelled = false;
+
+  (async () => {
+    try {
+      setReportsLoading(true);
+      const params = new URLSearchParams({
+        sw_lat: String(bounds.sw_lat),
+        sw_lng: String(bounds.sw_lng),
+        ne_lat: String(bounds.ne_lat),
+        ne_lng: String(bounds.ne_lng),
+      });
+      const reports = await get<ReportItem[]>(`/reports?${params}`);
+      if (cancelled) return;
+
+      setReports(reports);
+
+      const kakao = kakaoRef.current;
+      const map = mapRef.current;
+
+      activeReportIwRef.current?.iw.close();
+      activeReportIwRef.current = null;
+      reportMarkersRef.current.forEach((m) => m.setMap(null));
+      reportMarkersRef.current = [];
+
+      reports.forEach((r) => {
+        if (r.lat == null || r.lng == null) return;
+
+        const marker = new kakao.maps.Marker({
+          map,
+          position: new kakao.maps.LatLng(r.lat, r.lng),
+          title: r.type ?? "제보",
+        });
+
+        const iw = new kakao.maps.InfoWindow({
+          content: `<div style="padding:8px;max-width:220px;">
+            <strong>${r.type ?? "제보"}</strong><br/>
+            ${r.description ?? ""}<br/>
+            <small>${r.user_nickname ?? ""} · ~${r.expire_at ?? ""}</small>
+          </div>`,
+        });
+
+        kakao.maps.event.addListener(marker, "click", () => {
+          const active = activeReportIwRef.current;
+          if (active?.id === r.id) {
+            active.iw.close();
+            activeReportIwRef.current = null;
+            return;
+          }
+          active?.iw.close();
+          iw.open(map, marker);
+          activeReportIwRef.current = { id: r.id, iw };
+        });
+
+        reportMarkersRef.current.push(marker);
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!cancelled) setReportsLoading(false);
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [bounds, setReports, setReportsLoading]);
 
 // 3) 선택 격자 → 인프라 전체 로드 + 필터된 마커
 useEffect(() => {
