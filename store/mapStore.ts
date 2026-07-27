@@ -1,11 +1,16 @@
 // 담당: 지도표시팀
 import { create } from "zustand";
+
+
+
+
 import type {
   GridBoundsQuery,
   GridDetail,
   GridItem,
   InfraType,
   InfrastructureItem,
+  CityEventItem,
 } from "@/lib/api/types";
 
 export type MapBounds = GridBoundsQuery;
@@ -31,6 +36,11 @@ type MapState = {
   setGridDetail: (detail: GridDetail | null) => void;
   setDetailLoading: (loading: boolean) => void;
   clearSelection: () => void;
+  //events
+  cityEvents: CityEventItem[];
+  cityEventsLoading: boolean;
+  setCityEvents: (items: CityEventItem[]) => void;
+  setCityEventsLoading: (loading: boolean) => void;
 };
 
 export const useMapStore = create<MapState>((set) => ({
@@ -45,6 +55,9 @@ export const useMapStore = create<MapState>((set) => ({
   gridDetail: null,
   detailLoading: false,
 
+  cityEvents: [],
+  cityEventsLoading: false,
+
   setBounds: (bounds) => set({ bounds }),
   setGrids: (grids) => set({ grids }),
   setGridsLoading: (gridsLoading) => set({ gridsLoading }),
@@ -53,6 +66,8 @@ export const useMapStore = create<MapState>((set) => ({
   setInfrastructures: (infrastructures) => set({ infrastructures }),
   setGridDetail: (gridDetail) => set({ gridDetail }),
   setDetailLoading: (detailLoading) => set({ detailLoading }),
+  setCityEvents: (cityEvents) => set({ cityEvents }),
+  setCityEventsLoading: (cityEventsLoading) => set({ cityEventsLoading }),
   clearSelection: () =>
     set({ selectedGridId: null, infrastructures: [], gridDetail: null }),
 }));

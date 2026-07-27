@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { get } from "@/lib/api/client";
 import type {
+  CityEventItem,
   GridDetail,
   GridItem,
   InfrastructureItem,
@@ -12,6 +13,8 @@ import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
 import GridInfoCard from "./GridInfoCard";
+
+
 
 const INFRA_TYPES: Array<InfraType | null> = [
   null,
@@ -50,7 +53,11 @@ export default function KakaoMap() {
   const bounds = useMapStore((s) => s.bounds);
   const setGrids = useMapStore((s) => s.setGrids);
   const setGridsLoading = useMapStore((s) => s.setGridsLoading);
-
+  //events
+  const cityEventMarkersRef = useRef<any[]>([]);
+  const activeCityEventIwRef = useRef<{ id: number; iw: any } | null>(null);
+  const setCityEvents = useMapStore((s) => s.setCityEvents);
+  const setCityEventsLoading = useMapStore((s) => s.setCityEventsLoading);
   const selectedGridId = useMapStore((s) => s.selectedGridId);
   const setSelectedGridId = useMapStore((s) => s.setSelectedGridId);
   const infraType = useMapStore((s) => s.infraType);
@@ -212,10 +219,12 @@ export default function KakaoMap() {
           });
 
           kakao.maps.event.addListener(polygon, "click", () => {
-            setSelectedGridId(g.grid_id);
+            const current = useMapStore.getState().selectedGridId;
+            if (current === g.grid_id) clearSelection();
+            else setSelectedGridId(g.grid_id);
           });
 
-          polygonsRef.current.push(polygon);
+          polygonsRef.current.push(polygon);  
         });
       } catch (error) {
         console.error(error);
@@ -229,6 +238,68 @@ export default function KakaoMap() {
     };
   }, [bounds, setGrids, setGridsLoading, setSelectedGridId]);
 
+  //2.5) 뷰포인트 이벤트
+useEffect(() => {
+  if (!bounds || !mapRef.current || !kakaoRef.current) return;
+  let cancelled = false;
+  (async () => {
+    try {
+      setCityEventsLoading(true);
+      const params = new URLSearchParams({
+        sw_lat: String(bounds.sw_lat),
+        sw_lng: String(bounds.sw_lng),
+        ne_lat: String(bounds.ne_lat),
+        ne_lng: String(bounds.ne_lng),
+      });
+      const events = await get<CityEventItem[]>(`/city-events?${params}`);
+      if (cancelled) return;
+      setCityEvents(events);
+      const kakao = kakaoRef.current;
+      const map = mapRef.current;
+      activeCityEventIwRef.current?.iw.close();
+      activeCityEventIwRef.current = null;
+      cityEventMarkersRef.current.forEach((m) => m.setMap(null));
+      cityEventMarkersRef.current = [];
+      events.forEach((e) => {
+        if (e.lat == null || e.lng == null) return;
+        const marker = new kakao.maps.Marker({
+          map,
+          position: new kakao.maps.LatLng(e.lat, e.lng),
+          title: e.title ?? e.type ?? "도시정보",
+        });
+        const iw = new kakao.maps.InfoWindow({
+          content: `<div style="padding:8px;max-width:220px;">
+            <strong>${e.type ?? ""}</strong><br/>
+            ${e.title ?? ""}<br/>
+            <small>${e.start_at ?? ""} ~ ${e.end_at ?? ""}</small>
+          </div>`,
+        });
+        kakao.maps.event.addListener(marker, "click", () => {
+          const active = activeCityEventIwRef.current;
+        
+          if (active?.id === e.id) {
+            active.iw.close();
+            activeCityEventIwRef.current = null;
+            return;
+          }
+        
+          active?.iw.close();
+          iw.open(map, marker);
+          activeCityEventIwRef.current = { id: e.id, iw };
+        });
+        cityEventMarkersRef.current.push(marker);
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!cancelled) setCityEventsLoading(false);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [bounds,setGridsLoading, setCityEvents, setCityEventsLoading]);
+
 // 3) 선택 격자 → 인프라 전체 로드 + 필터된 마커
 useEffect(() => {
   if (!selectedGridId || !mapRef.current || !kakaoRef.current) {
@@ -239,7 +310,7 @@ useEffect(() => {
 
   let cancelled = false;
 
-  (async () => {
+  (async () => {  
     try {
       // 항상 전체 (집계용)
       const items = await get<InfrastructureItem[]>(

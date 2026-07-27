@@ -1,5 +1,19 @@
 // 담당: 공통기반
 
+//city-envents
+export type CityEventItem = {
+  id: number;
+  type: string | null;
+  title: string | null;
+  description: string | null;
+  lat: number | null;
+  lng: number | null;
+  start_at: string | null;
+  end_at: string | null;
+};
+
+
+
 export type ApiSuccess<T> = {
     success: true;
     data: T;
