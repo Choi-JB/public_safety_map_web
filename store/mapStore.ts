@@ -1,10 +1,44 @@
 // 담당: 지도표시팀
 import { create } from "zustand";
+import type {
+  GridBoundsQuery,
+  GridItem,
+  InfraType,
+  InfrastructureItem,
+} from "@/lib/api/types";
+
+export type MapBounds = GridBoundsQuery;
 
 type MapState = {
-  // TODO: 지도 상태 필드 정의
+  bounds: MapBounds | null;
+  grids: GridItem[];
+  gridsLoading: boolean;
+
+  selectedGridId: number | null;
+  infraType: InfraType | null; // null = 전체
+  infrastructures: InfrastructureItem[];
+
+  setBounds: (bounds: MapBounds) => void;
+  setGrids: (grids: GridItem[]) => void;
+  setGridsLoading: (loading: boolean) => void;
+  setSelectedGridId: (id: number | null) => void;
+  setInfraType: (type: InfraType | null) => void;
+  setInfrastructures: (items: InfrastructureItem[]) => void;
 };
 
-export const useMapStore = create<MapState>(() => ({
-  // TODO: 초기값 및 action 로직 구현
+export const useMapStore = create<MapState>((set) => ({
+  bounds: null,
+  grids: [],
+  gridsLoading: false,
+
+  selectedGridId: null,
+  infraType: null,
+  infrastructures: [],
+
+  setBounds: (bounds) => set({ bounds }),
+  setGrids: (grids) => set({ grids }),
+  setGridsLoading: (gridsLoading) => set({ gridsLoading }),
+  setSelectedGridId: (selectedGridId) => set({ selectedGridId }),
+  setInfraType: (infraType) => set({ infraType }),
+  setInfrastructures: (infrastructures) => set({ infrastructures }),
 }));
