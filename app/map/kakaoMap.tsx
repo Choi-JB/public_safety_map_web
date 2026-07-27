@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { get } from "@/lib/api/client";
 import type {
   CityEventItem,
@@ -75,6 +75,8 @@ export default function KakaoMap() {
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
 
+  const [query, setQuery] = useState("");
+
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
     const kakao = kakaoRef.current;
@@ -108,6 +110,30 @@ export default function KakaoMap() {
   const moveToCity = (lat: number, lng: number) => {
     clearSelection();
     moveMap(lat, lng, 6);
+  };
+
+  const searchAddress = () => {
+    const kakao = kakaoRef.current;
+    if (!kakao || !query.trim()) return;
+
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(query.trim(), (result: any[], status: string) => {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        clearSelection();
+        moveMap(Number(result[0].y), Number(result[0].x), 5);
+        return;
+      }
+
+      const places = new kakao.maps.services.Places();
+      places.keywordSearch(query.trim(), (data: any[], status2: string) => {
+        if (status2 === kakao.maps.services.Status.OK && data[0]) {
+          clearSelection();
+          moveMap(Number(data[0].y), Number(data[0].x), 5);
+        } else {
+          alert("검색 결과가 없습니다.");
+        }
+      });
+    });
   };
 
   // 1) 지도 + bounds + 최초 GPS
@@ -480,6 +506,36 @@ useEffect(() => {
           boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
         }}
       >
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") searchAddress();
+          }}
+          placeholder="주소 또는 장소 검색"
+          style={{
+            padding: "4px 8px",
+            border: "1px solid #ccc",
+            borderRadius: 6,
+            fontSize: 12,
+            width: 180,
+          }}
+        />
+        <button
+          type="button"
+          onClick={searchAddress}
+          style={{
+            padding: "4px 8px",
+            border: "1px solid #ccc",
+            borderRadius: 6,
+            background: "#fff",
+            cursor: "pointer",
+            fontSize: 12,
+          }}
+        >
+          검색
+        </button>
+
         <button
           type="button"
           onClick={moveToCurrentLocation}
