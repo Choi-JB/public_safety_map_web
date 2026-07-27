@@ -1,6 +1,6 @@
 // 담당: 피드백/관리자팀
 
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 type Props = {
   page: number;

@@ -3,16 +3,16 @@
 "use client";
 
 import { useAdminStore } from "@/store/adminStore";
-import { AdminMapPanel } from "./AdminMapPanel";
-import { AdminTopbar } from "./AdminTopbar";
-import { CityEventsPanel } from "./CityEventsPanel";
-import { DashboardPanel } from "./DashboardPanel";
-import { DeleteConfirmModal } from "./DeleteConfirmModal";
-import { CityEventModal } from "./CityEventModal";
-import { FeedbacksPanel } from "./FeedbacksPanel";
-import { ImagePreviewModal } from "./ImagePreviewModal";
-import { MarkersPanel } from "./MarkersPanel";
-import { ReportsPanel } from "./ReportsPanel";
+import { AdminMapPanel } from "./layout/AdminMapPanel";
+import { AdminTopbar } from "./layout/AdminTopbar";
+import { CityEventModal } from "./modals/CityEventModal";
+import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
+import { ImagePreviewModal } from "./modals/ImagePreviewModal";
+import { CityEventsPanel } from "./panels/CityEventsPanel";
+import { DashboardPanel } from "./panels/DashboardPanel";
+import { FeedbacksPanel } from "./panels/FeedbacksPanel";
+import { MarkersPanel } from "./panels/MarkersPanel";
+import { ReportsPanel } from "./panels/ReportsPanel";
 import styles from "./admin.module.css";
 
 function PanelContent() {

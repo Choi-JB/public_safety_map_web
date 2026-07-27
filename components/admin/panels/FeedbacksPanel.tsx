@@ -4,14 +4,14 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import { ActiveFilterChecks, DatePresetChecks } from "./FilterChecks";
-import { formatCreatedAt } from "./formatDate";
-import { MapMoveButton } from "./MapMoveButton";
-import { Pagination } from "./Pagination";
-import { RefreshIcon } from "./RefreshIcon";
-import { SafetyBadge } from "./SafetyBadge";
-import { TrashIcon } from "./TrashIcon";
-import styles from "./admin.module.css";
+import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
+import { formatCreatedAt } from "../shared/formatDate";
+import { MapMoveButton } from "../shared/MapMoveButton";
+import { Pagination } from "../shared/Pagination";
+import { RefreshIcon } from "../shared/RefreshIcon";
+import { SafetyBadge } from "../shared/SafetyBadge";
+import { TrashIcon } from "../shared/TrashIcon";
+import styles from "../admin.module.css";
 
 function authorLabel(item: {
   user_id: string;

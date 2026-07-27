@@ -4,52 +4,58 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import { ActiveFilterChecks, DatePresetChecks } from "./FilterChecks";
-import { formatCreatedAt } from "./formatDate";
-import { MapMoveButton } from "./MapMoveButton";
-import { Pagination } from "./Pagination";
-import { RefreshIcon } from "./RefreshIcon";
-import { TrashIcon } from "./TrashIcon";
-import styles from "./admin.module.css";
+import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
+import { formatCreatedAt } from "../shared/formatDate";
+import { MapMoveButton } from "../shared/MapMoveButton";
+import { Pagination } from "../shared/Pagination";
+import { RefreshIcon } from "../shared/RefreshIcon";
+import { TrashIcon } from "../shared/TrashIcon";
+import styles from "../admin.module.css";
 
-export function CityEventsPanel() {
-  const events = useAdminStore((s) => s.events);
-  const eventTypes = useAdminStore((s) => s.eventTypes);
-  const filters = useAdminStore((s) => s.eventFilters);
+function authorLabel(report: {
+  user_id: string;
+  user?: { nickname: string } | null;
+}) {
+  return report.user?.nickname?.trim() || "-";
+}
+
+export function ReportsPanel() {
+  const reports = useAdminStore((s) => s.reports);
+  const reportTypes = useAdminStore((s) => s.reportTypes);
+  const filters = useAdminStore((s) => s.reportFilters);
   const loading = useAdminStore((s) => s.loading);
-  const setEventFilters = useAdminStore((s) => s.setEventFilters);
-  const applyEventDatePreset = useAdminStore((s) => s.applyEventDatePreset);
-  const resetEventFilters = useAdminStore((s) => s.resetEventFilters);
-  const loadEvents = useAdminStore((s) => s.loadEvents);
-  const openEventDetail = useAdminStore((s) => s.openEventDetail);
+  const setReportFilters = useAdminStore((s) => s.setReportFilters);
+  const applyReportDatePreset = useAdminStore((s) => s.applyReportDatePreset);
+  const resetReportFilters = useAdminStore((s) => s.resetReportFilters);
+  const loadReports = useAdminStore((s) => s.loadReports);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
 
   useEffect(() => {
-    void loadEvents();
-  }, [loadEvents, filters.page, filters.filter]);
+    void loadReports();
+  }, [loadReports, filters.page, filters.filter]);
 
   return (
     <div>
-      <div className={styles.panelHeader}>도시정보 관리</div>
+      <div className={styles.panelHeader}>제보 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>
           <div className={styles.filterRow}>
             <DatePresetChecks
-              idPrefix="event"
+              idPrefix="report"
               value={filters.date_preset}
-              onChange={applyEventDatePreset}
+              onChange={applyReportDatePreset}
             />
             <div className={styles.field}>
-              <label htmlFor="event-from">시작일</label>
+              <label htmlFor="report-from">시작일</label>
               <input
-                id="event-from"
+                id="report-from"
                 type="date"
                 value={filters.date_from}
                 onChange={(e) =>
-                  setEventFilters({
+                  setReportFilters({
                     date_from: e.target.value,
                     date_preset: "",
                   })
@@ -57,13 +63,13 @@ export function CityEventsPanel() {
               />
             </div>
             <div className={styles.field}>
-              <label htmlFor="event-to">종료일</label>
+              <label htmlFor="report-to">종료일</label>
               <input
-                id="event-to"
+                id="report-to"
                 type="date"
                 value={filters.date_to}
                 onChange={(e) =>
-                  setEventFilters({
+                  setReportFilters({
                     date_to: e.target.value,
                     date_preset: "",
                   })
@@ -74,14 +80,14 @@ export function CityEventsPanel() {
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
-              <label htmlFor="event-type">유형</label>
+              <label htmlFor="report-type">유형</label>
               <select
-                id="event-type"
+                id="report-type"
                 value={filters.type}
-                onChange={(e) => setEventFilters({ type: e.target.value })}
+                onChange={(e) => setReportFilters({ type: e.target.value })}
               >
                 <option value="">전체</option>
-                {eventTypes.map((type) => (
+                {reportTypes.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -89,16 +95,16 @@ export function CityEventsPanel() {
               </select>
             </div>
             <ActiveFilterChecks
-              idPrefix="event"
+              idPrefix="report"
               value={filters.filter}
-              onChange={(filter) => setEventFilters({ filter, page: 1 })}
+              onChange={(filter) => setReportFilters({ filter, page: 1 })}
             />
             <button
               type="button"
               className={`${styles.button} ${styles.buttonPrimary}`}
               onClick={() => {
-                setEventFilters({ page: 1 });
-                void loadEvents();
+                setReportFilters({ page: 1 });
+                void loadReports();
               }}
             >
               조회
@@ -109,8 +115,8 @@ export function CityEventsPanel() {
               title="필터 초기화"
               aria-label="필터 초기화"
               onClick={() => {
-                resetEventFilters();
-                void loadEvents();
+                resetReportFilters();
+                void loadReports();
               }}
             >
               <RefreshIcon />
@@ -124,26 +130,26 @@ export function CityEventsPanel() {
               <tr>
                 <th>지도</th>
                 <th>유형</th>
-                <th>제목</th>
+                <th>작성자</th>
+                <th>설명</th>
                 <th>사진</th>
-                <th>등록일</th>
+                <th>작성일</th>
                 <th>삭제</th>
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? (
+              {reports.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "도시정보가 없습니다."}
+                  <td colSpan={7} className={styles.empty}>
+                    {loading ? "불러오는 중…" : "제보가 없습니다."}
                   </td>
                 </tr>
               ) : (
-                events.map((event) => {
-                  const active = event.is_active !== "N";
+                reports.map((report) => {
+                  const active = report.is_active === "Y";
                   const focused =
-                    mapFocus?.kind === "event" && mapFocus.id === event.id;
+                    mapFocus?.kind === "report" && mapFocus.id === report.id;
                   const rowClass = [
-                    styles.rowClickable,
                     active ? "" : styles.rowInactive,
                     focused ? styles.rowFocused : "",
                   ]
@@ -151,37 +157,34 @@ export function CityEventsPanel() {
                     .join(" ");
 
                   return (
-                    <tr
-                      key={event.id}
-                      className={rowClass}
-                      onClick={() => openEventDetail(event)}
-                    >
-                      <td onClick={(e) => e.stopPropagation()}>
+                    <tr key={report.id} className={rowClass || undefined}>
+                      <td>
                         <MapMoveButton
                           active={focused}
                           onClick={() =>
                             setMapFocus({
-                              lat: Number(event.lat),
-                              lng: Number(event.lng),
-                              label: event.title,
-                              id: event.id,
-                              kind: "event",
+                              lat: Number(report.lat),
+                              lng: Number(report.lng),
+                              label: report.type,
+                              id: report.id,
+                              kind: "report",
                             })
                           }
                         />
                       </td>
-                      <td>{event.type}</td>
-                      <td>{event.title}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {event.img_url ? (
+                      <td>{report.type}</td>
+                      <td>{authorLabel(report)}</td>
+                      <td>{report.description || "-"}</td>
+                      <td>
+                        {report.img_url ? (
                           <button
                             type="button"
                             className={styles.iconButton}
                             title="사진 보기"
                             aria-label="사진 보기"
                             onClick={() => {
-                              if (event.img_url) {
-                                openImagePreview(event.img_url);
+                              if (report.img_url) {
+                                openImagePreview(report.img_url);
                               }
                             }}
                           >
@@ -192,24 +195,26 @@ export function CityEventsPanel() {
                         )}
                       </td>
                       <td className={styles.dateCell}>
-                        {formatCreatedAt(event.created_at)}
+                        {formatCreatedAt(report.created_at)}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                          title="삭제"
-                          aria-label="삭제"
-                          onClick={() =>
-                            openDeleteConfirm({
-                              kind: "event",
-                              id: event.id,
-                              label: `${event.type} · ${event.title}`,
-                            })
-                          }
-                        >
-                          <TrashIcon />
-                        </button>
+                      <td>
+                        {active ? (
+                          <button
+                            type="button"
+                            className={`${styles.iconButton} ${styles.iconButtonDanger}`}
+                            title="삭제"
+                            aria-label="삭제"
+                            onClick={() =>
+                              openDeleteConfirm({
+                                kind: "report",
+                                id: report.id,
+                                label: `${report.type} · ${authorLabel(report)}`,
+                              })
+                            }
+                          >
+                            <TrashIcon />
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -222,10 +227,10 @@ export function CityEventsPanel() {
         <Pagination
           page={filters.page}
           onPrev={() =>
-            setEventFilters({ page: Math.max(1, filters.page - 1) })
+            setReportFilters({ page: Math.max(1, filters.page - 1) })
           }
-          onNext={() => setEventFilters({ page: filters.page + 1 })}
-          disableNext={events.length < filters.limit}
+          onNext={() => setReportFilters({ page: filters.page + 1 })}
+          disableNext={reports.length < filters.limit}
         />
       </div>
     </div>

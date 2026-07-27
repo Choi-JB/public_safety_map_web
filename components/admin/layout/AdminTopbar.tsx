@@ -3,7 +3,7 @@
 "use client";
 
 import type { AdminTab } from "@/lib/api/admin";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
@@ -46,7 +46,7 @@ export function AdminTopbar() {
       </nav>
       <div className={styles.userMeta}>
         <span>관리자</span>
-        <button type="button" className={styles.button} onClick={handleLogout} title="인증 연동 후 사용">
+        <button type="button" className={styles.button} onClick={handleLogout} >
           로그아웃
         </button>
       </div>

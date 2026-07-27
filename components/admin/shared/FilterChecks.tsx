@@ -1,7 +1,7 @@
 // 담당: 피드백/관리자팀
 
 import type { ActiveFilter, DatePreset } from "@/lib/api/admin";
-import styles from "./admin.module.css";
+import styles from "../admin.module.css";
 
 export const DATE_PRESETS: { value: Exclude<DatePreset, "">; label: string }[] =
   [

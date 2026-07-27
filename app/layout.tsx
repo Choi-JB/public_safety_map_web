@@ -1,4 +1,7 @@
 // 담당: 공통기반
+
+import { AuthHydrator } from "@/components/shared/AuthHydrator";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -6,7 +9,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <AuthHydrator />
+        {children}
+      </body>
     </html>
   );
 }

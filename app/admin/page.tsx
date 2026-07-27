@@ -25,5 +25,7 @@ export default function AdminPage() {
     })
   }, [checkSession, router]);
 
+  if (checking) return null;
+  
   return <AdminShell />;
 }
