@@ -1,50 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { get } from "@/lib/api/client";
 import type {
   CityEventItem,
   GridDetail,
   GridItem,
   InfrastructureItem,
-  InfraType,
   ReportItem,
 } from "@/lib/api/types";
 import { AuthEntry } from "@/components/login/AuthEntry";
 import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
-import GridInfoCard from "./GridInfoCard";
-
-
-
-const INFRA_TYPES: Array<InfraType | null> = [
-  null,
-  "CCTV",
-  "경찰서",
-  "소방서",
-  "편의점",
-];
-
-const CITY_PRESETS = [
-  { name: "서울", lat: 37.5665, lng: 126.978 },
-  { name: "부산", lat: 35.1796, lng: 129.0756 },
-  { name: "대구", lat: 35.8714, lng: 128.6014 },
-  { name: "인천", lat: 37.4563, lng: 126.7052 },
-  { name: "광주", lat: 35.1595, lng: 126.8526 },
-  { name: "대전", lat: 36.3504, lng: 127.3845 },
-  { name: "울산", lat: 35.5384, lng: 129.3114 },
-  { name: "제주", lat: 33.4996, lng: 126.5312 },
-] as const;
 
 const MAX_ZOOM_OUT = 7;
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
-function infraTypeLabel(t: InfraType | null) {
-  return t === null ? "전체" : t;
-}
-
 export default function KakaoMap() {
+  const setMapActions = useMapStore((s) => s.setMapActions);
+  const clearMapActions = useMapStore((s) => s.clearMapActions);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const kakaoRef = useRef<any>(null);
@@ -63,7 +39,6 @@ export default function KakaoMap() {
   const selectedGridId = useMapStore((s) => s.selectedGridId);
   const setSelectedGridId = useMapStore((s) => s.setSelectedGridId);
   const infraType = useMapStore((s) => s.infraType);
-  const setInfraType = useMapStore((s) => s.setInfraType);
   const setInfrastructures = useMapStore((s) => s.setInfrastructures);
 
   const setGridDetail = useMapStore((s) => s.setGridDetail);
@@ -75,8 +50,6 @@ export default function KakaoMap() {
   const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
-
-  const [query, setQuery] = useState("");
 
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -108,17 +81,12 @@ export default function KakaoMap() {
     );
   };
 
-  const moveToCity = (lat: number, lng: number) => {
-    clearSelection();
-    moveMap(lat, lng, 6);
-  };
-
-  const searchAddress = () => {
+  const searchAddress = (q: string) => {
     const kakao = kakaoRef.current;
-    if (!kakao || !query.trim()) return;
+    if (!kakao || !q.trim()) return;
 
     const geocoder = new kakao.maps.services.Geocoder();
-    geocoder.addressSearch(query.trim(), (result: any[], status: string) => {
+    geocoder.addressSearch(q.trim(), (result: any[], status: string) => {
       if (status === kakao.maps.services.Status.OK && result[0]) {
         clearSelection();
         moveMap(Number(result[0].y), Number(result[0].x), 5);
@@ -126,7 +94,7 @@ export default function KakaoMap() {
       }
 
       const places = new kakao.maps.services.Places();
-      places.keywordSearch(query.trim(), (data: any[], status2: string) => {
+      places.keywordSearch(q.trim(), (data: any[], status2: string) => {
         if (status2 === kakao.maps.services.Status.OK && data[0]) {
           clearSelection();
           moveMap(Number(data[0].y), Number(data[0].x), 5);
@@ -158,6 +126,15 @@ export default function KakaoMap() {
         });
         map.setMaxLevel(MAX_ZOOM_OUT);
         mapRef.current = map;
+
+        setMapActions({
+          moveTo: (lat, lng, level = 6) => {
+            clearSelection();
+            moveMap(lat, lng, level);
+          },
+          searchAddress,
+          moveToCurrentLocation,
+        });
 
         const updateBounds = () => {
           const b = map.getBounds();
@@ -206,8 +183,9 @@ export default function KakaoMap() {
     return () => {
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
+      clearMapActions();
     };
-  }, [setBounds]);
+  }, [setBounds, setMapActions, clearMapActions, clearSelection]);
 
   // 2) 격자 Polygon + 클릭
   useEffect(() => {
@@ -487,125 +465,5 @@ useEffect(() => {
     };
   }, [selectedGridId, setGridDetail, setDetailLoading]);
 
-  return (
-    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          left: 12,
-          zIndex: 10,
-          display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
-          alignItems: "center",
-          background: "#fff",
-          padding: 8,
-          borderRadius: 8,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-        }}
-      >
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") searchAddress();
-          }}
-          placeholder="주소 또는 장소 검색"
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            fontSize: 12,
-            width: 180,
-          }}
-        />
-        <button
-          type="button"
-          onClick={searchAddress}
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            background: "#fff",
-            cursor: "pointer",
-            fontSize: 12,
-          }}
-        >
-          검색
-        </button>
-
-        <button
-          type="button"
-          onClick={moveToCurrentLocation}
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            background: "#fff",
-            cursor: "pointer",
-            fontSize: 12,
-          }}
-        >
-          내 위치
-        </button>
-
-        <select
-          defaultValue=""
-          onChange={(e) => {
-            const city = CITY_PRESETS.find((c) => c.name === e.target.value);
-            if (city) moveToCity(city.lat, city.lng);
-            e.target.value = "";
-          }}
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-            fontSize: 12,
-            background: "#fff",
-          }}
-        >
-          <option value="" disabled>
-            도시 이동
-          </option>
-          {CITY_PRESETS.map((city) => (
-            <option key={city.name} value={city.name}>
-              {city.name}
-            </option>
-          ))}
-        </select>
-
-        {INFRA_TYPES.map((t) => (
-          <button
-            key={infraTypeLabel(t)}
-            type="button"
-            onClick={() => setInfraType(t)}
-            style={{
-              padding: "4px 8px",
-              border:
-                infraType === t ? "2px solid #2563eb" : "1px solid #ccc",
-              borderRadius: 6,
-              background: infraType === t ? "#eff6ff" : "#fff",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            {infraTypeLabel(t)}
-          </button>
-        ))}
-
-        {selectedGridId != null && (
-          <span style={{ fontSize: 12, alignSelf: "center", marginLeft: 4 }}>
-            선택 격자: {selectedGridId}
-          </span>
-        )}
-      </div>
-
-      <AuthEntry />
-
-      <GridInfoCard />
-    </div>
-  );
+  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

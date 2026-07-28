@@ -12,6 +12,12 @@ import type {
 
 export type MapBounds = GridBoundsQuery;
 
+type MapActions = {
+  moveTo: (lat: number, lng: number, level?: number) => void;
+  searchAddress: (query: string) => void;
+  moveToCurrentLocation: () => void;
+};
+
 type MapState = {
   bounds: MapBounds | null;
   grids: GridItem[];
@@ -43,6 +49,12 @@ type MapState = {
   reportsLoading: boolean;
   setReports: (items: ReportItem[]) => void;
   setReportsLoading: (loading: boolean) => void;
+  //map action
+  moveTo: MapActions["moveTo"] | null;
+  searchAddress: MapActions["searchAddress"] | null;
+  moveToCurrentLocation: MapActions["moveToCurrentLocation"] | null;
+  setMapActions: (actions: MapActions) => void;
+  clearMapActions: () => void;
 };
 
 export const useMapStore = create<MapState>((set) => ({
@@ -77,4 +89,21 @@ export const useMapStore = create<MapState>((set) => ({
   reportsLoading: false,
   setReports: (reports) => set({ reports }),
   setReportsLoading: (reportsLoading) => set({ reportsLoading }),
+
+  //map action
+  moveTo: null,
+  searchAddress: null,
+  moveToCurrentLocation: null,
+  setMapActions: (actions) =>
+    set({
+      moveTo: actions.moveTo,
+      searchAddress: actions.searchAddress,
+      moveToCurrentLocation: actions.moveToCurrentLocation,
+    }),
+  clearMapActions: () =>
+    set({
+      moveTo: null,
+      searchAddress: null,
+      moveToCurrentLocation: null,
+    }),
 }));
