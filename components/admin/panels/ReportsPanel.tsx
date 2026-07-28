@@ -33,6 +33,7 @@ export function ReportsPanel() {
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
 
+
   useEffect(() => {
     void loadReports();
   }, [loadReports, filters.page, filters.filter]);
@@ -161,14 +162,16 @@ export function ReportsPanel() {
                       <td>
                         <MapMoveButton
                           active={focused}
-                          onClick={() =>
-                            setMapFocus({
+                          onClick={
+                            () => setMapFocus({
                               lat: Number(report.lat),
                               lng: Number(report.lng),
                               label: report.type,
                               id: report.id,
                               kind: "report",
+                              description: report.description,
                             })
+                            
                           }
                         />
                       </td>

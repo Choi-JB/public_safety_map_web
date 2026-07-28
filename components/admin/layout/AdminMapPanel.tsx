@@ -6,12 +6,16 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/store/adminStore";
 import { BackIcon } from "../shared/BackIcon";
 import styles from "../admin.module.css";
+import KakaoMap from "@/app/map/kakaoMap";
+
 
 export function AdminMapPanel() {
-  const mapFocus = useAdminStore((s) => s.mapFocus);
   const router = useRouter();
 
+  const setMapFocus = useAdminStore((s) => s.setMapFocus);
+
   const backToMap = () => {
+    setMapFocus(null); 
     router.push("/map");
   };
 
@@ -28,7 +32,8 @@ export function AdminMapPanel() {
         </button>
       </div>
       <div className={styles.mapBody}>
-        {mapFocus ? (
+        <KakaoMap />
+        {/* {mapFocus ? (
           <>
             <div className={styles.mapPin} aria-hidden />
             <div className={styles.mapFocusLabel}>
@@ -62,7 +67,7 @@ export function AdminMapPanel() {
               테이블의 지도이동을 누르면 해당 좌표가 여기에 표시됩니다.
             </p>
           </>
-        )}
+        )} */}
       </div>
     </section>
   );
