@@ -15,6 +15,9 @@ import { MarkersPanel } from "./panels/MarkersPanel";
 import { ReportsPanel } from "./panels/ReportsPanel";
 import styles from "./admin.module.css";
 
+import { useEffect } from "react";
+import { useMapStore } from "@/store/mapStore";
+
 function PanelContent() {
   const tab = useAdminStore((s) => s.tab);
 
@@ -38,6 +41,12 @@ export function AdminShell() {
   const error = useAdminStore((s) => s.error);
   const message = useAdminStore((s) => s.message);
   const clearNotice = useAdminStore((s) => s.clearNotice);
+
+  useEffect(() => {
+    return () => {
+      useAdminStore.setState({ mapFocus: null });
+    };
+  }, []);
 
   return (
     <div className={styles.shell}>

@@ -93,6 +93,7 @@ export type MapFocus = {
   label?: string;
   id?: string;
   kind?: "report" | "feedback" | "event";
+  description?: string;
 };
 
 export type DeleteTarget =

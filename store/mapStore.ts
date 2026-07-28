@@ -24,6 +24,7 @@ type MapState = {
   gridDetail: GridDetail | null;
   detailLoading: boolean;
 
+
   setBounds: (bounds: MapBounds) => void;
   setGrids: (grids: GridItem[]) => void;
   setGridsLoading: (loading: boolean) => void;
@@ -60,6 +61,7 @@ export const useMapStore = create<MapState>((set) => ({
   cityEvents: [],
   cityEventsLoading: false,
 
+  
   setBounds: (bounds) => set({ bounds }),
   setGrids: (grids) => set({ grids }),
   setGridsLoading: (gridsLoading) => set({ gridsLoading }),

@@ -10,12 +10,12 @@ import type {
   InfraType,
   ReportItem,
 } from "@/lib/api/types";
-import { AuthEntry } from "@/components/login/AuthEntry";
+
 import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
 import GridInfoCard from "./GridInfoCard";
-
+import { useAdminStore } from "@/store/adminStore";
 
 
 const INFRA_TYPES: Array<InfraType | null> = [
@@ -75,6 +75,10 @@ export default function KakaoMap() {
   const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
+
+  //admin
+  const mapFocus = useAdminStore((s) => s.mapFocus);
+  const focusMarkerRef = useRef<any>(null);
 
   const [query, setQuery] = useState("");
 
@@ -258,7 +262,7 @@ export default function KakaoMap() {
             else setSelectedGridId(g.grid_id);
           });
 
-          polygonsRef.current.push(polygon);  
+          polygonsRef.current.push(polygon);
         });
       } catch (error) {
         console.error(error);
@@ -273,189 +277,189 @@ export default function KakaoMap() {
   }, [bounds, setGrids, setGridsLoading, setSelectedGridId]);
 
   //2.5) 뷰포인트 이벤트
-useEffect(() => {
-  if (!bounds || !mapRef.current || !kakaoRef.current) return;
-  let cancelled = false;
-  (async () => {
-    try {
-      setCityEventsLoading(true);
-      const params = new URLSearchParams({
-        sw_lat: String(bounds.sw_lat),
-        sw_lng: String(bounds.sw_lng),
-        ne_lat: String(bounds.ne_lat),
-        ne_lng: String(bounds.ne_lng),
-      });
-      const events = await get<CityEventItem[]>(`/city-events?${params}`);
-      if (cancelled) return;
-      setCityEvents(events);
-      const kakao = kakaoRef.current;
-      const map = mapRef.current;
-      activeCityEventIwRef.current?.iw.close();
-      activeCityEventIwRef.current = null;
-      cityEventMarkersRef.current.forEach((m) => m.setMap(null));
-      cityEventMarkersRef.current = [];
-      events.forEach((e) => {
-        if (e.lat == null || e.lng == null) return;
-        const marker = new kakao.maps.Marker({
-          map,
-          position: new kakao.maps.LatLng(e.lat, e.lng),
-          title: e.title ?? e.type ?? "도시정보",
+  useEffect(() => {
+    if (!bounds || !mapRef.current || !kakaoRef.current) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setCityEventsLoading(true);
+        const params = new URLSearchParams({
+          sw_lat: String(bounds.sw_lat),
+          sw_lng: String(bounds.sw_lng),
+          ne_lat: String(bounds.ne_lat),
+          ne_lng: String(bounds.ne_lng),
         });
-        const iw = new kakao.maps.InfoWindow({
-          content: `<div style="padding:8px;max-width:220px;">
+        const events = await get<CityEventItem[]>(`/city-events?${params}`);
+        if (cancelled) return;
+        setCityEvents(events);
+        const kakao = kakaoRef.current;
+        const map = mapRef.current;
+        activeCityEventIwRef.current?.iw.close();
+        activeCityEventIwRef.current = null;
+        cityEventMarkersRef.current.forEach((m) => m.setMap(null));
+        cityEventMarkersRef.current = [];
+        events.forEach((e) => {
+          if (e.lat == null || e.lng == null) return;
+          const marker = new kakao.maps.Marker({
+            map,
+            position: new kakao.maps.LatLng(e.lat, e.lng),
+            title: e.title ?? e.type ?? "도시정보",
+          });
+          const iw = new kakao.maps.InfoWindow({
+            content: `<div style="padding:8px;max-width:220px;">
             <strong>${e.type ?? ""}</strong><br/>
             ${e.title ?? ""}<br/>
             <small>${e.start_at ?? ""} ~ ${e.end_at ?? ""}</small>
           </div>`,
+          });
+          kakao.maps.event.addListener(marker, "click", () => {
+            const active = activeCityEventIwRef.current;
+
+            if (active?.id === e.id) {
+              active.iw.close();
+              activeCityEventIwRef.current = null;
+              return;
+            }
+
+            active?.iw.close();
+            iw.open(map, marker);
+            activeCityEventIwRef.current = { id: e.id, iw };
+          });
+          cityEventMarkersRef.current.push(marker);
         });
-        kakao.maps.event.addListener(marker, "click", () => {
-          const active = activeCityEventIwRef.current;
-        
-          if (active?.id === e.id) {
-            active.iw.close();
-            activeCityEventIwRef.current = null;
-            return;
-          }
-        
-          active?.iw.close();
-          iw.open(map, marker);
-          activeCityEventIwRef.current = { id: e.id, iw };
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) setCityEventsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bounds, setGridsLoading, setCityEvents, setCityEventsLoading]);
+
+  // 2.6) viewport reports
+  useEffect(() => {
+    if (!bounds || !mapRef.current || !kakaoRef.current) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setReportsLoading(true);
+        const params = new URLSearchParams({
+          sw_lat: String(bounds.sw_lat),
+          sw_lng: String(bounds.sw_lng),
+          ne_lat: String(bounds.ne_lat),
+          ne_lng: String(bounds.ne_lng),
         });
-        cityEventMarkersRef.current.push(marker);
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (!cancelled) setCityEventsLoading(false);
-    }
-  })();
-  return () => {
-    cancelled = true;
-  };
-}, [bounds,setGridsLoading, setCityEvents, setCityEventsLoading]);
+        const reports = await get<ReportItem[]>(`/reports?${params}`);
+        if (cancelled) return;
 
-// 2.6) viewport reports
-useEffect(() => {
-  if (!bounds || !mapRef.current || !kakaoRef.current) return;
+        setReports(reports);
 
-  let cancelled = false;
+        const kakao = kakaoRef.current;
+        const map = mapRef.current;
 
-  (async () => {
-    try {
-      setReportsLoading(true);
-      const params = new URLSearchParams({
-        sw_lat: String(bounds.sw_lat),
-        sw_lng: String(bounds.sw_lng),
-        ne_lat: String(bounds.ne_lat),
-        ne_lng: String(bounds.ne_lng),
-      });
-      const reports = await get<ReportItem[]>(`/reports?${params}`);
-      if (cancelled) return;
+        activeReportIwRef.current?.iw.close();
+        activeReportIwRef.current = null;
+        reportMarkersRef.current.forEach((m) => m.setMap(null));
+        reportMarkersRef.current = [];
 
-      setReports(reports);
+        reports.forEach((r) => {
+          if (r.lat == null || r.lng == null) return;
 
-      const kakao = kakaoRef.current;
-      const map = mapRef.current;
+          const marker = new kakao.maps.Marker({
+            map,
+            position: new kakao.maps.LatLng(r.lat, r.lng),
+            title: r.type ?? "제보",
+          });
 
-      activeReportIwRef.current?.iw.close();
-      activeReportIwRef.current = null;
-      reportMarkersRef.current.forEach((m) => m.setMap(null));
-      reportMarkersRef.current = [];
-
-      reports.forEach((r) => {
-        if (r.lat == null || r.lng == null) return;
-
-        const marker = new kakao.maps.Marker({
-          map,
-          position: new kakao.maps.LatLng(r.lat, r.lng),
-          title: r.type ?? "제보",
-        });
-
-        const iw = new kakao.maps.InfoWindow({
-          content: `<div style="padding:8px;max-width:220px;">
+          const iw = new kakao.maps.InfoWindow({
+            content: `<div style="padding:8px;max-width:220px;">
             <strong>${r.type ?? "제보"}</strong><br/>
             ${r.description ?? ""}<br/>
             <small>${r.user_nickname ?? ""} · ~${r.expire_at ?? ""}</small>
           </div>`,
+          });
+
+          kakao.maps.event.addListener(marker, "click", () => {
+            const active = activeReportIwRef.current;
+            if (active?.id === r.id) {
+              active.iw.close();
+              activeReportIwRef.current = null;
+              return;
+            }
+            active?.iw.close();
+            iw.open(map, marker);
+            activeReportIwRef.current = { id: r.id, iw };
+          });
+
+          reportMarkersRef.current.push(marker);
         });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) setReportsLoading(false);
+      }
+    })();
 
-        kakao.maps.event.addListener(marker, "click", () => {
-          const active = activeReportIwRef.current;
-          if (active?.id === r.id) {
-            active.iw.close();
-            activeReportIwRef.current = null;
-            return;
-          }
-          active?.iw.close();
-          iw.open(map, marker);
-          activeReportIwRef.current = { id: r.id, iw };
-        });
+    return () => {
+      cancelled = true;
+    };
+  }, [bounds, setReports, setReportsLoading]);
 
-        reportMarkersRef.current.push(marker);
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (!cancelled) setReportsLoading(false);
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
-}, [bounds, setReports, setReportsLoading]);
-
-// 3) 선택 격자 → 인프라 전체 로드 + 필터된 마커
-useEffect(() => {
-  if (!selectedGridId || !mapRef.current || !kakaoRef.current) {
-    markersRef.current.forEach((m) => m.setMap(null));
-    markersRef.current = [];
-    return;
-  }
-
-  let cancelled = false;
-
-  (async () => {  
-    try {
-      // 항상 전체 (집계용)
-      const items = await get<InfrastructureItem[]>(
-        `/grids/${selectedGridId}/infrastructures`
-      );
-      if (cancelled) return;
-
-      setInfrastructures(items);
-
-      const kakao = kakaoRef.current;
-      const map = mapRef.current;
-
+  // 3) 선택 격자 → 인프라 전체 로드 + 필터된 마커
+  useEffect(() => {
+    if (!selectedGridId || !mapRef.current || !kakaoRef.current) {
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current = [];
-
-      // 마커만 필터
-      const visible =
-        infraType == null
-          ? items
-          : items.filter((i) => i.type === infraType);
-
-      visible.forEach((item) => {
-        if (item.lat == null || item.lng == null) return;
-
-        const marker = new kakao.maps.Marker({
-          map,
-          position: new kakao.maps.LatLng(item.lat, item.lng),
-          title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
-        });
-        markersRef.current.push(marker);
-      });
-    } catch (error) {
-      console.error(error);
+      return;
     }
-  })();
 
-  return () => {
-    cancelled = true;
-  };
-}, [selectedGridId, infraType, setInfrastructures]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // 항상 전체 (집계용)
+        const items = await get<InfrastructureItem[]>(
+          `/grids/${selectedGridId}/infrastructures`
+        );
+        if (cancelled) return;
+
+        setInfrastructures(items);
+
+        const kakao = kakaoRef.current;
+        const map = mapRef.current;
+
+        markersRef.current.forEach((m) => m.setMap(null));
+        markersRef.current = [];
+
+        // 마커만 필터
+        const visible =
+          infraType == null
+            ? items
+            : items.filter((i) => i.type === infraType);
+
+        visible.forEach((item) => {
+          if (item.lat == null || item.lng == null) return;
+
+          const marker = new kakao.maps.Marker({
+            map,
+            position: new kakao.maps.LatLng(item.lat, item.lng),
+            title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
+          });
+          markersRef.current.push(marker);
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGridId, infraType, setInfrastructures]);
 
   // 4) 선택 격자 → 인포카드 detail
   useEffect(() => {
@@ -486,6 +490,28 @@ useEffect(() => {
       cancelled = true;
     };
   }, [selectedGridId, setGridDetail, setDetailLoading]);
+
+  //관리자페이지 mapFocus 변경 시 지도 이동
+  useEffect(() => {
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+    if (!kakao || !map) return;
+
+    // 이전 포커스 마커 제거
+    focusMarkerRef.current?.setMap(null);
+    focusMarkerRef.current = null;
+
+    if (!mapFocus) return;
+
+    moveMap(mapFocus.lat, mapFocus.lng, 6);
+
+    var marker = new kakao.maps.Marker({
+      map,
+      position: new kakao.maps.LatLng(mapFocus.lat, mapFocus.lng),
+      title: mapFocus.description,
+    });
+    focusMarkerRef.current = marker;
+  }, [mapFocus]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100vh" }}>
@@ -603,7 +629,6 @@ useEffect(() => {
         )}
       </div>
 
-      <AuthEntry />
 
       <GridInfoCard />
     </div>
