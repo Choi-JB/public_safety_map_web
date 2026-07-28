@@ -6,7 +6,7 @@ import { AuthEntry } from "@/components/login/AuthEntry";
 export default function MapPage() {
   return (
     <>
-      <KakaoMap />;
+      <KakaoMap />
       <AuthEntry />
     </>
   )
