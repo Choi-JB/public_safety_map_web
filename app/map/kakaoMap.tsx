@@ -77,9 +77,9 @@ export default function KakaoMap() {
   const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
+
   // 내위치 — 지도에 표시할 사용자 위치 마커 보관
   const myLocationMarkerRef = useRef<any>(null);
-
 
   // 내위치 — 파란 핀 생성/이동
   const updateMyLocationMarker = (lat: number, lng: number) => {
@@ -332,7 +332,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(e.lat, e.lng),
             title: e.title ?? e.type ?? "도시정보",
-            image: createPinImage(kakao, MARKER_COLORS.event), // 행사 — 분홍
+            image: createPinImage(kakao, MARKER_COLORS.event), // 행사 - 분홍색
           });
           const iw = new kakao.maps.InfoWindow({
             content: `<div style="padding:8px;max-width:220px;">
