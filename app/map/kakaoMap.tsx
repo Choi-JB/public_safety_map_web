@@ -15,8 +15,34 @@ import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
 import { useAdminStore } from "@/store/adminStore";
 
-const MAX_ZOOM_OUT = 7;
+const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
+
+// 마커 종류별 색상 정의
+const MARKER_COLORS = {
+  me: "#2563eb", // 내위치 — 파란
+  report: "#dc2626", // report — 붉은
+  infra: "#16a34a", // infra — 녹색
+  event: "#ec4899", // 행사 — 분홍
+} as const;
+
+// SVG 핀을 만들어 카카오 MarkerImage로 변환 (색상만 바꿔 재사용)
+function createPinImage(kakao: any, color: string) {
+  const svg = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="35" viewBox="0 0 24 35">
+      <path fill="${color}" stroke="#fff" stroke-width="1.5"
+        d="M12 0C5.4 0 0 5.4 0 12c0 9 12 23 12 23s12-14 12-23C24 5.4 18.6 0 12 0z"/>
+      <circle cx="12" cy="12" r="4.5" fill="#fff"/>
+    </svg>`
+  );
+  // 카카오 마커에 쓸 이미지 객체 생성 (핀 끝점이 좌표에 맞도록 offset 설정)
+  return new kakao.maps.MarkerImage(
+    `data:image/svg+xml;charset=UTF-8,${svg}`,
+    new kakao.maps.Size(24, 35),
+    { offset: new kakao.maps.Point(12, 35) }
+  );
+}
+
 
 export default function KakaoMap() {
   const setMapActions = useMapStore((s) => s.setMapActions);
@@ -51,11 +77,31 @@ export default function KakaoMap() {
   const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
+  // 내위치 — 지도에 표시할 사용자 위치 마커 보관
+  const myLocationMarkerRef = useRef<any>(null);
 
 
-    //admin
-    const mapFocus = useAdminStore((s) => s.mapFocus);
-    const focusMarkerRef = useRef<any>(null);
+  // 내위치 — 파란 핀 생성/이동
+  const updateMyLocationMarker = (lat: number, lng: number) => {
+    const map = mapRef.current;
+    const kakao = kakaoRef.current;
+    if (!map || !kakao) return;
+    const position = new kakao.maps.LatLng(lat, lng);
+    if (myLocationMarkerRef.current) {
+      myLocationMarkerRef.current.setPosition(position);
+      return;
+    }
+    myLocationMarkerRef.current = new kakao.maps.Marker({
+      map,
+      position,
+      title: "내 위치",
+      image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
+    });
+  };
+
+  //admin
+  const mapFocus = useAdminStore((s) => s.mapFocus);
+  const focusMarkerRef = useRef<any>(null);
     
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -75,6 +121,7 @@ export default function KakaoMap() {
       ({ coords }) => {
         clearSelection();
         moveMap(coords.latitude, coords.longitude, 5);
+        updateMyLocationMarker(coords.latitude, coords.longitude); // 내위치 — 파란 핀
       },
       (error) => {
         console.error("현재 위치를 가져오지 못했습니다.", error);
@@ -170,6 +217,7 @@ export default function KakaoMap() {
                 new kakao.maps.LatLng(coords.latitude, coords.longitude)
               );
               map.setLevel(5);
+              updateMyLocationMarker(coords.latitude, coords.longitude); // 내위치 — 최초 파란 핀
             },
             () => {
               // 거부/실패 → 기본 서울 유지
@@ -284,6 +332,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(e.lat, e.lng),
             title: e.title ?? e.type ?? "도시정보",
+            image: createPinImage(kakao, MARKER_COLORS.event), // 행사 — 분홍
           });
           const iw = new kakao.maps.InfoWindow({
             content: `<div style="padding:8px;max-width:220px;">
@@ -353,6 +402,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(r.lat, r.lng),
             title: r.type ?? "제보",
+            image: createPinImage(kakao, MARKER_COLORS.report), // report — 붉은색
           });
 
           const iw = new kakao.maps.InfoWindow({
@@ -428,6 +478,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(item.lat, item.lng),
             title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
+            image: createPinImage(kakao, MARKER_COLORS.infra), // infra — 녹색
           });
           markersRef.current.push(marker);
         });
