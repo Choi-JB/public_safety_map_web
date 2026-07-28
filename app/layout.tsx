@@ -1,6 +1,6 @@
 // 담당: 공통기반
 
-import { AuthHydrator } from "@/components/shared/AuthHydrator";
+import { AuthProvider } from "@/components/shared/AuthProvider";
 
 export default function RootLayout({
   children,
@@ -10,8 +10,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <AuthHydrator />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
