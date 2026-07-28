@@ -26,11 +26,13 @@ export function LoginForm() {
     const { user, authType } = useAuthStore.getState();
 	    if (!user) return; // 실패 시 error는 store에 이미 세팅됨 → 화면에 표시됨
 	
-	    if (authType === "session") {
-	      router.push("/admin");
-	    } else if (authType === "jwt") {
-	      router.push("/map");
-	    }
+	    // if (authType === "session") {
+	    //   router.push("/admin");
+	    // } else if (authType === "jwt") {
+	    //   router.push("/map");
+	    // }
+
+      router.push("/map");
   }
 
   return (
@@ -73,7 +75,8 @@ export function LoginForm() {
       </form>
 
       <p className={styles.hint}>
-          관리자 계정은 세션으로, 일반 유저 계정은 JWT로 로그인됩니다.
+          관리자 계정은 세션으로, 일반 유저 계정은 JWT로 로그인됩니다. 
+          (배포 때는 이 문구 삭제)
       </p>
     </div>
   );

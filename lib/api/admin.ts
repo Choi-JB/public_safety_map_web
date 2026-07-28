@@ -199,13 +199,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
  * @param id 관리자 ID
  * @param role 관리자 역할
  */
-export type AdminMe = { id: string; role: string };
+export type AdminMe = { id: string; role: string; nickname: string | null; email: string | null };
 
 /**
  * 관리자 정보 조회
  * @returns 관리자 정보
  */
-export async function fetchAdminMe() {
+export async function fetchAdminMe(): Promise<AdminMe> {
   return request<AdminMe>("/admin/me");
 }
 
