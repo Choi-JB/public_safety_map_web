@@ -322,8 +322,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         page: reportFilters.page,
         limit: reportFilters.limit,
         filter: reportFilters.filter,
-        date_from: reportFilters.date_from || undefined,
-        date_to: reportFilters.date_to || undefined,
+        date_from: `${reportFilters.date_from} 00:00:00.000` || undefined,
+        date_to: `${reportFilters.date_to} 23:59:59.999` || undefined,
       });
       const filtered = reportFilters.type
         ? reports.filter((r) => r.type === reportFilters.type)

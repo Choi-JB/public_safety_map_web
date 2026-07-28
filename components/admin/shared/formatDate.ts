@@ -17,12 +17,21 @@ export function formatCreatedAt(value: string) {
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-
-    if (isSameLocalDay(date, new Date())) {
-      return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-
-    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`;
+    // Z가 잘못 붙은 KST wall-clock을 그대로 보여 줄 때
+    const y = date.getUTCFullYear();
+    const m = pad(date.getUTCMonth() + 1);
+    const d = pad(date.getUTCDate());
+    const hh = pad(date.getUTCHours());
+    const mm = pad(date.getUTCMinutes());
+    const now = new Date();
+    const sameDay =
+      y === now.getFullYear() &&
+      date.getUTCMonth() === now.getMonth() &&
+      date.getUTCDate() === now.getDate();
+    // 주의: "오늘" 비교도 wall-clock 기준으로 맞추려면
+    // now도 getUTC*가 아니라, 서버와 같은 규칙으로 맞춰야 함
+    if (sameDay) return `${hh}:${mm}`;
+    return `${y}.${m}.${d}`;
   } catch {
     return value;
   }

@@ -15,10 +15,14 @@ import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
 import { useMapStore } from "@/store/mapStore";
 import { useAdminStore } from "@/store/adminStore";
 
+type Props = {
+  enableGrid?: boolean; //기본 true
+}
+
 const MAX_ZOOM_OUT = 7;
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
-export default function KakaoMap() {
+export default function KakaoMap({enableGrid = true}: Props) {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -195,6 +199,7 @@ export default function KakaoMap() {
 
   // 2) 격자 Polygon + 클릭
   useEffect(() => {
+    if(!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
