@@ -12,6 +12,7 @@ import KakaoMap from "@/app/map/kakaoMap";
 export function AdminMapPanel() {
   const router = useRouter();
 
+  const mapFocus = useAdminStore((s) => s.mapFocus);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
 
   const backToMap = () => {
@@ -32,7 +33,7 @@ export function AdminMapPanel() {
         </button>
       </div>
       <div className={styles.mapBody}>
-        <KakaoMap />
+        <KakaoMap enableGrid={false} />
         {/* {mapFocus ? (
           <>
             <div className={styles.mapPin} aria-hidden />

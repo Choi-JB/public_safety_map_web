@@ -285,6 +285,7 @@ export default function KakaoMap() {
 
   // 2) 격자 데이터 조회 (bounds 변경 시)
   useEffect(() => {
+    if(!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
