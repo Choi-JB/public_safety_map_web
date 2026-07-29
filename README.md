@@ -53,10 +53,14 @@ web/
 │       │   ├── DashboardPanel.tsx
 │       │   ├── ReportsPanel.tsx
 │       │   ├── FeedbacksPanel.tsx
-│       │   ├── MarkersPanel.tsx
-│       │   └── CityEventsPanel.tsx
+│       │   ├── CityEventsPanel.tsx
+│       │   └── markers/
+│       │       ├── MarkersPanel.tsx
+│       │       ├── ReportMarkerForm.tsx
+│       │       └── CityEventMarkerForm.tsx
 │       ├── modals/
 │       │   ├── DeleteConfirmModal.tsx
+│       │   ├── RestoreConfirmModal.tsx
 │       │   ├── ImagePreviewModal.tsx
 │       │   ├── CityEventModal.tsx
 │       │   └── DetailModals.tsx
@@ -66,8 +70,12 @@ web/
 │           ├── MapMoveButton.tsx
 │           ├── SafetyBadge.tsx
 │           ├── formatDate.ts
+│           ├── ScheduleRow.tsx
+│           ├── ImageAttachField.tsx
 │           ├── CloseIcon.tsx
 │           ├── RefreshIcon.tsx
+│           ├── RestoreIcon.tsx
+│           ├── BackIcon.tsx
 │           └── TrashIcon.tsx
 ├── lib/
 │   └── api/

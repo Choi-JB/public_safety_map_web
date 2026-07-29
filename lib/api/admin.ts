@@ -8,7 +8,8 @@ export type AdminTab =
   | "reports"
   | "feedbacks"
   | "markers"
-  | "city-events";
+  | "city-events"
+  | "settings";
 
 export type ActiveFilter = "active" | "inactive" | "all";
 
@@ -68,6 +69,7 @@ export type AdminCityEvent = {
   img_url?: string | null;
   is_active?: "Y" | "N";
   user?: { nickname: string } | null;
+  deleted_at?: string | null;
 };
 
 export type EventsListResult = {
@@ -76,6 +78,7 @@ export type EventsListResult = {
 };
 
 export type CreateEventPayload = {
+  id?: string;
   type: string;
   title: string;
   description: string;
@@ -99,6 +102,10 @@ export type MapFocus = {
 export type DeleteTarget =
   | { kind: "report"; id: string; label: string }
   | { kind: "feedback"; id: string; label: string }
+  | { kind: "event"; id: string; label: string };
+
+export type RestoreTarget =
+  | { kind: "report"; id: string; label: string }
   | { kind: "event"; id: string; label: string };
 
 export type ListQuery = {
@@ -277,6 +284,17 @@ export async function deleteReport(id: number) {
 }
 
 /**
+ * 신고 복구 (소프트 삭제 해제)
+ * @param id 신고 ID
+ */
+export async function restoreReport(id: number) {
+  return request<undefined>("/admin/restore-report", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+/**
  * 피드백 목록 조회
  * @param query 조회 조건
  * @returns 피드백 목록 (JSON 파싱 결과)
@@ -395,6 +413,17 @@ export async function updateEvent(payload: UpdateEventPayload) {
  */
 export async function deleteEvent(id: number) {
   return request<undefined>("/admin/delete-event", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+/**
+ * 이벤트 복구 (소프트 삭제 해제)
+ * @param id 이벤트 ID
+ */
+export async function restoreEvent(id: number) {
+  return request<undefined>("/admin/restore-event", {
     method: "POST",
     body: JSON.stringify({ id }),
   });

@@ -14,8 +14,9 @@ const TABS: { id: AdminTab; label: string }[] = [
   { id: "dashboard", label: "대시보드" },
   { id: "reports", label: "제보 관리" },
   { id: "feedbacks", label: "피드백 관리" },
-  { id: "markers", label: "마커 등록" },
   { id: "city-events", label: "도시정보" },
+  { id: "markers", label: "마커 등록" },
+  { id: "settings", label: "설정" },
 ];
 
 export function AdminTopbar() {
@@ -24,6 +25,8 @@ export function AdminTopbar() {
 
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
+
+  const { user } = useAuthStore();
 
   const handleLogout = async () => {
     await logout();
@@ -45,7 +48,7 @@ export function AdminTopbar() {
         ))}
       </nav>
       <div className={styles.userMeta}>
-        <span>관리자</span>
+        <span>{user?.nickname}</span>
         <button type="button" className={styles.button} onClick={handleLogout} >
           로그아웃
         </button>

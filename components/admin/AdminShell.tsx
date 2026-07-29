@@ -8,10 +8,11 @@ import { AdminTopbar } from "./layout/AdminTopbar";
 import { CityEventModal } from "./modals/CityEventModal";
 import { DeleteConfirmModal } from "./modals/DeleteConfirmModal";
 import { ImagePreviewModal } from "./modals/ImagePreviewModal";
+import { RestoreConfirmModal } from "./modals/RestoreConfirmModal";
 import { CityEventsPanel } from "./panels/CityEventsPanel";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import { FeedbacksPanel } from "./panels/FeedbacksPanel";
-import { MarkersPanel } from "./panels/MarkersPanel";
+import { MarkersPanel } from "./panels/markers/MarkersPanel";
 import { ReportsPanel } from "./panels/ReportsPanel";
 import styles from "./admin.module.css";
 
@@ -91,6 +92,7 @@ export function AdminShell() {
       <ImagePreviewModal />
       <CityEventModal />
       <DeleteConfirmModal />
+      <RestoreConfirmModal />
     </div>
   );
 }

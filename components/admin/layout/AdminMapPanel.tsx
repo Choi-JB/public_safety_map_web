@@ -12,11 +12,18 @@ import KakaoMap from "@/app/map/kakaoMap";
 export function AdminMapPanel() {
   const router = useRouter();
 
-  const mapFocus = useAdminStore((s) => s.mapFocus);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
-
+  const tab = useAdminStore((s) => s.tab);
+  // 제보·도시정보(원하면 피드백도)에서는 지도 조작 잠금
+  // 마커 등록 탭은 좌표 선택이 필요할 수 있어 열어 둠
+  const interactive = !(
+    tab === "reports" ||
+    tab === "city-events" ||
+    tab === "feedbacks"
+  ); //지도 조작 잠금할 페이지 목록
+  
   const backToMap = () => {
-    setMapFocus(null); 
+    setMapFocus(null);
     router.push("/map");
   };
 
@@ -33,42 +40,8 @@ export function AdminMapPanel() {
         </button>
       </div>
       <div className={styles.mapBody}>
-        <KakaoMap enableGrid={false} />
-        {/* {mapFocus ? (
-          <>
-            <div className={styles.mapPin} aria-hidden />
-            <div className={styles.mapFocusLabel}>
-              {mapFocus.label ?? "선택 위치"}
-            </div>
-            <div>
-              lat {mapFocus.lat.toFixed(5)}, lng {mapFocus.lng.toFixed(5)}
-            </div>
-            {mapFocus.kind === "report" && (
-              <div className={styles.mapFocusBadge}>선택됨 · 제보 #{mapFocus.id}</div>
-            )}
-            {mapFocus.kind === "feedback" && (
-              <div className={styles.mapFocusBadge}>
-                선택됨 · 피드백 #{mapFocus.id}
-              </div>
-            )}
-            {mapFocus.kind === "event" && (
-              <div className={styles.mapFocusBadge}>
-                선택됨 · 도시정보 #{mapFocus.id}
-              </div>
-            )}
-            <p className={styles.hint}>
-              지도표시팀 지도 연동 전 — 좌표 포커스 미리보기
-            </p>
-          </>
-        ) : (
-          <>
-            <div className={styles.mapPin} aria-hidden />
-            <div>좌측 지도 영역 (40%)</div>
-            <p className={styles.hint}>
-              테이블의 지도이동을 누르면 해당 좌표가 여기에 표시됩니다.
-            </p>
-          </>
-        )} */}
+        <KakaoMap enableGrid={false} interactive={interactive} />
+
       </div>
     </section>
   );

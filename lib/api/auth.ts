@@ -54,6 +54,39 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   throw new Error("로그인 응답이 올바르지 않습니다.");
 }
 
+export type RegisterPayload = {
+  email: string;
+  password: string;
+  nickname: string;
+};
+
+/**
+ * 회원가입 API
+ */
+export async function registerApi(payload: RegisterPayload): Promise<void> {
+  const res = await fetch(`${getBaseUrl()}/auth/register`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  let json: ApiResponse<unknown>;
+  try {
+    json = (await res.json()) as ApiResponse<unknown>;
+  } catch {
+    throw new Error("서버 응답을 파싱하지 못했습니다.");
+  }
+
+  if (!res.ok || ("success" in json && json.success === false)) {
+    const message =
+      "message" in json && json.message
+        ? json.message
+        : `회원가입 실패 (${res.status})`;
+    throw new Error(message);
+  }
+}
+
 /** 로그아웃 API (일반 유저 JWT 폐기, 관리자 세션 종료) */
 export async function logoutApi(): Promise<void> {
     const res = await fetch(`${getBaseUrl()}/auth/logout`, {

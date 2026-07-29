@@ -18,6 +18,11 @@ import { useMapStore } from "@/store/mapStore";
 import { useAdminStore } from "@/store/adminStore";
 
 const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
+type Props = {
+  enableGrid?: boolean; //기본 true
+  interactive?: boolean; //기본 true - false면 드래그/줌 불가
+}
+
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
 // 마커 종류별 색상 정의
@@ -82,7 +87,8 @@ function createPinImage(kakao: any, color: string, label?: string) {
 }
 
 
-export default function KakaoMap() {
+
+export default function KakaoMap({ enableGrid = true, interactive = true }: Props) {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -144,7 +150,7 @@ export default function KakaoMap() {
   //admin
   const mapFocus = useAdminStore((s) => s.mapFocus);
   const focusMarkerRef = useRef<any>(null);
-    
+
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
     const kakao = kakaoRef.current;
@@ -222,6 +228,10 @@ export default function KakaoMap() {
         map.setMaxLevel(MAX_ZOOM_OUT);
         mapRef.current = map;
 
+        //관리자 페이지에서 드래그/줌 불가 설정
+        map.setDraggable(interactive);
+        map.setZoomable(interactive);
+
         setMapActions({
           moveTo: (lat, lng, level = 6) => {
             clearSelection();
@@ -285,7 +295,7 @@ export default function KakaoMap() {
 
   // 2) 격자 데이터 조회 (bounds 변경 시)
   useEffect(() => {
-    if(!enableGrid) return;
+    if (!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
@@ -638,5 +648,14 @@ export default function KakaoMap() {
     focusMarkerRef.current = marker;
   }, [mapFocus]);
 
+  // interactive 변경 시 드래그/줌 on/off
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setDraggable(interactive);
+    map.setZoomable(interactive);
+  }, [interactive]);
+
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+
 }

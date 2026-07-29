@@ -9,6 +9,8 @@ import {
   fetchFeedbacks,
   fetchReports,
   fetchSummary,
+  restoreReport,
+  restoreEvent,
   updateEvent,
 } from "@/lib/api/admin";
 import type {
@@ -22,6 +24,7 @@ import type {
   DatePreset,
   DeleteTarget,
   MapFocus,
+  RestoreTarget,
   UpdateEventPayload,
 } from "@/lib/api/admin";
 
@@ -103,6 +106,7 @@ type AdminState = {
   selectedEvent: AdminCityEvent | null;
   previewImageUrl: string | null;
   deleteTarget: DeleteTarget | null;
+  restoreTarget: RestoreTarget | null;
   loading: boolean;
   error: string | null;
   message: string | null;
@@ -119,6 +123,7 @@ type AdminState = {
   openEventDetail: (event: AdminCityEvent | null) => void;
   openImagePreview: (url: string | null) => void;
   openDeleteConfirm: (target: DeleteTarget | null) => void;
+  openRestoreConfirm: (target: RestoreTarget | null) => void;
   clearNotice: () => void;
   resetReportFilters: () => void;
   resetFeedbackFilters: () => void;
@@ -130,6 +135,9 @@ type AdminState = {
   loadFeedbacks: () => Promise<void>;
   loadEvents: () => Promise<void>;
   confirmDelete: () => Promise<void>;
+  confirmRestore: () => Promise<void>;
+  restoreReportById: (id: string | number) => Promise<void>;
+  restoreEventById: (id: string | number) => Promise<void>;
   submitCityEvent: (payload: CreateEventPayload) => Promise<void>;
   updateCityEvent: (payload: UpdateEventPayload) => Promise<boolean>;
 };
@@ -185,6 +193,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   selectedEvent: null,
   previewImageUrl: null,
   deleteTarget: null,
+  restoreTarget: null,
   loading: false,
   error: null,
   message: null,
@@ -256,6 +265,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   openEventDetail: (selectedEvent) => set({ selectedEvent }),
   openImagePreview: (previewImageUrl) => set({ previewImageUrl }),
   openDeleteConfirm: (deleteTarget) => set({ deleteTarget }),
+  openRestoreConfirm: (restoreTarget) => set({ restoreTarget }),
   clearNotice: () => set({ error: null, message: null }),
   resetReportFilters: () => {
     const range = getDateRangeFromPreset("1m");
@@ -450,7 +460,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         set({
           deleteTarget: null,
           selectedEvent: null,
-          message: "도시정보가 삭제되었습니다.",
+          message: "도시정보가 비활성 처리되었습니다.",
           loading: false,
         });
         await get().loadEvents();
@@ -461,6 +471,54 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         loading: false,
         error: e instanceof Error ? e.message : "삭제에 실패했습니다.",
       });
+    }
+  },
+
+  restoreReportById: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await restoreReport(Number(id));
+      set({
+        loading: false,
+        restoreTarget: null,
+        message: "제보가 복구되었습니다.",
+      });
+      await get().loadReports();
+      await get().loadSummary();
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "복구에 실패했습니다.",
+      });
+    }
+  },
+
+  restoreEventById: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await restoreEvent(Number(id));
+      set({
+        loading: false,
+        restoreTarget: null,
+        message: "도시정보가 복구되었습니다.",
+      });
+      await get().loadEvents();
+      await get().loadSummary();
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "복구에 실패했습니다.",
+      });
+    }
+  },
+
+  confirmRestore: async () => {
+    const { restoreTarget } = get();
+    if (!restoreTarget) return;
+    if (restoreTarget.kind === "report") {
+      await get().restoreReportById(restoreTarget.id);
+    } else {
+      await get().restoreEventById(restoreTarget.id);
     }
   },
 
