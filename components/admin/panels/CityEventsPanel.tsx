@@ -31,6 +31,9 @@ export function CityEventsPanel() {
 
   useEffect(() => {
     void loadEvents();
+    return () => {
+      setMapFocus(null);
+    }
   }, [loadEvents, filters.page, filters.filter]);
 
   return (

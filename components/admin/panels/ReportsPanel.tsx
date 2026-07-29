@@ -38,6 +38,9 @@ export function ReportsPanel() {
 
   useEffect(() => {
     void loadReports();
+    return () => {
+      setMapFocus(null);
+    }
   }, [loadReports, filters.page, filters.filter]);
 
   return (

@@ -17,12 +17,13 @@ import { useAdminStore } from "@/store/adminStore";
 
 type Props = {
   enableGrid?: boolean; //기본 true
+  interactive?: boolean; //기본 true - false면 드래그/줌 불가
 }
 
 const MAX_ZOOM_OUT = 7;
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
-export default function KakaoMap({enableGrid = true}: Props) {
+export default function KakaoMap({ enableGrid = true, interactive = true }: Props) {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -57,10 +58,10 @@ export default function KakaoMap({enableGrid = true}: Props) {
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
 
 
-    //admin
-    const mapFocus = useAdminStore((s) => s.mapFocus);
-    const focusMarkerRef = useRef<any>(null);
-    
+  //admin
+  const mapFocus = useAdminStore((s) => s.mapFocus);
+  const focusMarkerRef = useRef<any>(null);
+
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
     const kakao = kakaoRef.current;
@@ -137,6 +138,10 @@ export default function KakaoMap({enableGrid = true}: Props) {
         map.setMaxLevel(MAX_ZOOM_OUT);
         mapRef.current = map;
 
+        //관리자 페이지에서 드래그/줌 불가 설정
+        map.setDraggable(interactive);
+        map.setZoomable(interactive);
+
         setMapActions({
           moveTo: (lat, lng, level = 6) => {
             clearSelection();
@@ -199,7 +204,7 @@ export default function KakaoMap({enableGrid = true}: Props) {
 
   // 2) 격자 Polygon + 클릭
   useEffect(() => {
-    if(!enableGrid) return;
+    if (!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
@@ -497,6 +502,14 @@ export default function KakaoMap({enableGrid = true}: Props) {
     });
     focusMarkerRef.current = marker;
   }, [mapFocus]);
+
+  // interactive 변경 시 드래그/줌 on/off
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setDraggable(interactive);
+    map.setZoomable(interactive);
+  }, [interactive]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

@@ -3,7 +3,7 @@
 "use client";
 
 import styles from "../../admin.module.css";
-import { ImageAttachField } from "./ImageAttachField";
+import { ImageAttachField } from "../../shared/ImageAttachField";
 
 const REPORT_TYPE_OPTIONS = ["사고", "공사", "자연재해", "통제", "기타"] as const;
 

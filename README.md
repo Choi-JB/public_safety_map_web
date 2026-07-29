@@ -57,8 +57,7 @@ web/
 │       │   └── markers/
 │       │       ├── MarkersPanel.tsx
 │       │       ├── ReportMarkerForm.tsx
-│       │       ├── CityEventMarkerForm.tsx
-│       │       └── ImageAttachField.tsx
+│       │       └── CityEventMarkerForm.tsx
 │       ├── modals/
 │       │   ├── DeleteConfirmModal.tsx
 │       │   ├── RestoreConfirmModal.tsx
@@ -71,8 +70,12 @@ web/
 │           ├── MapMoveButton.tsx
 │           ├── SafetyBadge.tsx
 │           ├── formatDate.ts
+│           ├── ScheduleRow.tsx
+│           ├── ImageAttachField.tsx
 │           ├── CloseIcon.tsx
 │           ├── RefreshIcon.tsx
+│           ├── RestoreIcon.tsx
+│           ├── BackIcon.tsx
 │           └── TrashIcon.tsx
 ├── lib/
 │   └── api/

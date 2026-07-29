@@ -617,6 +617,82 @@
   align-items: end;
 }
 
+.markerScheduleRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.scheduleLine {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.scheduleLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.iconInput {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iconInputBtn {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  border: none;
+  border-right: 1px solid var(--admin-border);
+  background: #f7f9fb;
+  color: var(--admin-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.iconInputBtn:hover {
+  background: var(--admin-accent-soft);
+}
+
+.iconInputBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconInputDisabled {
+  background: #f5f7f9;
+}
+
+.iconInputField {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--admin-text);
+  background: transparent;
+}
+
+.hiddenPicker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hint {
   color: var(--admin-muted);
   font-size: 12px;

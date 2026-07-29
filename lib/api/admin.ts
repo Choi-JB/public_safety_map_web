@@ -78,6 +78,7 @@ export type EventsListResult = {
 };
 
 export type CreateEventPayload = {
+  id?: string;
   type: string;
   title: string;
   description: string;
