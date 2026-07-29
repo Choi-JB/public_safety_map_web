@@ -53,10 +53,15 @@ web/
 │       │   ├── DashboardPanel.tsx
 │       │   ├── ReportsPanel.tsx
 │       │   ├── FeedbacksPanel.tsx
-│       │   ├── MarkersPanel.tsx
-│       │   └── CityEventsPanel.tsx
+│       │   ├── CityEventsPanel.tsx
+│       │   └── markers/
+│       │       ├── MarkersPanel.tsx
+│       │       ├── ReportMarkerForm.tsx
+│       │       ├── CityEventMarkerForm.tsx
+│       │       └── ImageAttachField.tsx
 │       ├── modals/
 │       │   ├── DeleteConfirmModal.tsx
+│       │   ├── RestoreConfirmModal.tsx
 │       │   ├── ImagePreviewModal.tsx
 │       │   ├── CityEventModal.tsx
 │       │   └── DetailModals.tsx

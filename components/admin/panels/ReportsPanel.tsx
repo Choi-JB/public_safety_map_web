@@ -9,6 +9,7 @@ import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
+import { RestoreIcon } from "../shared/RestoreIcon";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -29,6 +30,7 @@ export function ReportsPanel() {
   const resetReportFilters = useAdminStore((s) => s.resetReportFilters);
   const loadReports = useAdminStore((s) => s.loadReports);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
+  const openRestoreConfirm = useAdminStore((s) => s.openRestoreConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
@@ -135,7 +137,7 @@ export function ReportsPanel() {
                 <th>설명</th>
                 <th>사진</th>
                 <th>작성일</th>
-                <th>삭제</th>
+                <th>작업</th>
               </tr>
             </thead>
             <tbody>
@@ -217,7 +219,24 @@ export function ReportsPanel() {
                           >
                             <TrashIcon />
                           </button>
-                        ) : null}
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            title="복구"
+                            aria-label="복구"
+                            disabled={loading}
+                            onClick={() =>
+                              openRestoreConfirm({
+                                kind: "report",
+                                id: report.id,
+                                label: `${report.type} · ${authorLabel(report)}`,
+                              })
+                            }
+                          >
+                            <RestoreIcon />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

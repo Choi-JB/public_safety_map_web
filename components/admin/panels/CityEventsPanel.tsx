@@ -9,6 +9,7 @@ import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
+import { RestoreIcon } from "../shared/RestoreIcon";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -23,6 +24,7 @@ export function CityEventsPanel() {
   const loadEvents = useAdminStore((s) => s.loadEvents);
   const openEventDetail = useAdminStore((s) => s.openEventDetail);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
+  const openRestoreConfirm = useAdminStore((s) => s.openRestoreConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
@@ -127,7 +129,7 @@ export function CityEventsPanel() {
                 <th>제목</th>
                 <th>사진</th>
                 <th>등록일</th>
-                <th>삭제</th>
+                <th>작업</th>
               </tr>
             </thead>
             <tbody>
@@ -195,21 +197,40 @@ export function CityEventsPanel() {
                         {formatCreatedAt(event.created_at)}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                          title="삭제"
-                          aria-label="삭제"
-                          onClick={() =>
-                            openDeleteConfirm({
-                              kind: "event",
-                              id: event.id,
-                              label: `${event.type} · ${event.title}`,
-                            })
-                          }
-                        >
-                          <TrashIcon />
-                        </button>
+                        {active ? (
+                          <button
+                            type="button"
+                            className={`${styles.iconButton} ${styles.iconButtonDanger}`}
+                            title="삭제"
+                            aria-label="삭제"
+                            onClick={() =>
+                              openDeleteConfirm({
+                                kind: "event",
+                                id: event.id,
+                                label: `${event.type} · ${event.title}`,
+                              })
+                            }
+                          >
+                            <TrashIcon />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            title="복구"
+                            aria-label="복구"
+                            disabled={loading}
+                            onClick={() =>
+                              openRestoreConfirm({
+                                kind: "event",
+                                id: event.id,
+                                label: `${event.type} · ${event.title}`,
+                              })
+                            }
+                          >
+                            <RestoreIcon />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
