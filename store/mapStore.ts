@@ -9,8 +9,27 @@ import type {
   CityEventItem,
   ReportItem,
 } from "@/lib/api/types";
+import {
+  SAFETY_GRADES,
+  type SafetyGrade,
+} from "@/app/map/gridStyle";
 
 export type MapBounds = GridBoundsQuery;
+export type { SafetyGrade };
+
+/** 인프라 타입 전체 (주변 토글 기본값) */
+export const INFRA_TYPES: InfraType[] = [
+  "CCTV",
+  "경찰서",
+  "소방서",
+  "편의점",
+];
+
+/** 왼쪽 사이드 패널 레이아웃 (Panel ↔ MapControls 동기) */
+export const SIDE_RAIL_WIDTH = 48;
+export const SIDE_DETAIL_WIDTH = 360;
+export const SIDE_PANEL_GAP = 20;
+export const SIDE_PANEL_SLIDE_MS = 250;
 
 type MapActions = {
   moveTo: (lat: number, lng: number, level?: number) => void;
@@ -24,18 +43,36 @@ type MapState = {
   gridsLoading: boolean;
 
   selectedGridId: number | null;
-  infraType: InfraType | null; // null = 전체
   infrastructures: InfrastructureItem[];
+
+  /** 지도에 인프라 마커 표시 */
+  infraVisible: boolean;
+  /** 표시할 인프라 타입 (비어 있으면 마커 없음) */
+  visibleInfraTypes: InfraType[];
+  setInfraVisible: (visible: boolean) => void;
+  toggleVisibleInfraType: (type: InfraType) => void;
+
+  /** 지도에 격자 폴리곤 표시 */
+  gridsVisible: boolean;
+  /** 표시할 안전등급 (비어 있으면 아무것도 안 그림) */
+  visibleGrades: SafetyGrade[];
+  setGridsVisible: (visible: boolean) => void;
+  toggleVisibleGrade: (grade: SafetyGrade) => void;
 
   gridDetail: GridDetail | null;
   detailLoading: boolean;
 
+  /** 왼쪽 상세 패널 열림 (MapControls left와 동기) */
+  sidePanelOpen: boolean;
+  setSidePanelOpen: (open: boolean) => void;
+  /** 왼쪽 패널 탭 (레일 / 지도 클릭 공유) */
+  sidePanelTab: "grid" | "events";
+  setSidePanelTab: (tab: "grid" | "events") => void;
 
   setBounds: (bounds: MapBounds) => void;
   setGrids: (grids: GridItem[]) => void;
   setGridsLoading: (loading: boolean) => void;
   setSelectedGridId: (id: number | null) => void;
-  setInfraType: (type: InfraType | null) => void;
   setInfrastructures: (items: InfrastructureItem[]) => void;
   setGridDetail: (detail: GridDetail | null) => void;
   setDetailLoading: (loading: boolean) => void;
@@ -43,8 +80,10 @@ type MapState = {
   //events
   cityEvents: CityEventItem[];
   cityEventsLoading: boolean;
+  selectedEventId: number | null;
   setCityEvents: (items: CityEventItem[]) => void;
   setCityEventsLoading: (loading: boolean) => void;
+  setSelectedEventId: (id: number | null) => void;
   //reports
   reports: ReportItem[];
   reportsLoading: boolean;
@@ -64,28 +103,53 @@ export const useMapStore = create<MapState>((set) => ({
   gridsLoading: false,
 
   selectedGridId: null,
-  infraType: null,
   infrastructures: [],
+
+  infraVisible: true,
+  visibleInfraTypes: [...INFRA_TYPES],
+  setInfraVisible: (infraVisible) => set({ infraVisible }),
+  toggleVisibleInfraType: (type) =>
+    set((s) => ({
+      visibleInfraTypes: s.visibleInfraTypes.includes(type)
+        ? s.visibleInfraTypes.filter((t) => t !== type)
+        : [...s.visibleInfraTypes, type],
+    })),
+
+  gridsVisible: true,
+  visibleGrades: [...SAFETY_GRADES],
+  setGridsVisible: (gridsVisible) => set({ gridsVisible }),
+  toggleVisibleGrade: (grade) =>
+    set((s) => ({
+      visibleGrades: s.visibleGrades.includes(grade)
+        ? s.visibleGrades.filter((g) => g !== grade)
+        : [...s.visibleGrades, grade],
+    })),
 
   gridDetail: null,
   detailLoading: false,
 
+  sidePanelOpen: false,
+  setSidePanelOpen: (sidePanelOpen) => set({ sidePanelOpen }),
+  sidePanelTab: "events",
+  setSidePanelTab: (sidePanelTab) => set({ sidePanelTab }),
+
   cityEvents: [],
   cityEventsLoading: false,
+  selectedEventId: null,
 
-  
   setBounds: (bounds) => set({ bounds }),
   setGrids: (grids) => set({ grids }),
   setGridsLoading: (gridsLoading) => set({ gridsLoading }),
   setSelectedGridId: (selectedGridId) => set({ selectedGridId }),
-  setInfraType: (infraType) => set({ infraType }),
   setInfrastructures: (infrastructures) => set({ infrastructures }),
   setGridDetail: (gridDetail) => set({ gridDetail }),
   setDetailLoading: (detailLoading) => set({ detailLoading }),
   setCityEvents: (cityEvents) => set({ cityEvents }),
   setCityEventsLoading: (cityEventsLoading) => set({ cityEventsLoading }),
+  setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   clearSelection: () =>
-    set({ selectedGridId: null, infrastructures: [], gridDetail: null }),
+    set({ selectedGridId: null, gridDetail: null }),
+  // infrastructures는 지도 view(중심+반경)용 — 격자 선택 해제와 무관
 
   reports: [],
   reportsLoading: false,

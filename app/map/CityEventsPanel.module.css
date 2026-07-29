@@ -1,0 +1,27 @@
+/* 패널 본문: 스크롤은 가능, 스크롤바는 숨김 */
+.scrollHide {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 구 Edge */
+}
+
+.scrollHide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* 상세 패널 슬라이드 (너비로 여닫기) */
+.slideWrap {
+  overflow: hidden;
+  height: 100%;
+  transition: width 0.25s ease;
+  flex-shrink: 0;
+}
+
+.slideInner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+  border-radius: 0 4px 4px 0;
+}

@@ -6,23 +6,83 @@ import type {
   CityEventItem,
   GridDetail,
   GridItem,
+  InfraType,
   InfrastructureItem,
   ReportItem,
 } from "@/lib/api/types";
 
 import { loadKakaoMap } from "./loadkakaoMap";
-import { gridRectanglePath, safetyGradeColor } from "./gridStyle";
+import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle";
+import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
 import { useMapStore } from "@/store/mapStore";
 import { useAdminStore } from "@/store/adminStore";
 
-type Props = {
-  enableGrid?: boolean; //기본 true
-}
-
-const MAX_ZOOM_OUT = 7;
+const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
-export default function KakaoMap({enableGrid = true}: Props) {
+// 마커 종류별 색상 정의
+const MARKER_COLORS = {
+  me: "#2563eb", // 내위치 — 파란
+  report: "#dc2626", // report — 붉은
+  infra: "#16a34a", // infra 기본 — 녹색
+  event: "#ec4899", // 행사 — 분홍
+} as const;
+
+/** 인프라 타입별 핀 색 */
+function infraColor(type: string | null) {
+  switch (type) {
+    case "CCTV":
+      return "#0f766e";
+    case "경찰서":
+      return "#1d4ed8";
+    case "소방서":
+      return "#ea580c";
+    case "편의점":
+      return "#65a30d";
+    default:
+      return MARKER_COLORS.infra;
+  }
+}
+
+/** 인프라 타입별 핀 안 글자 */
+function infraLabel(type: string | null) {
+  switch (type) {
+    case "CCTV":
+      return "C";
+    case "경찰서":
+      return "경";
+    case "소방서":
+      return "소";
+    case "편의점":
+      return "편";
+    default:
+      return undefined;
+  }
+}
+
+/** SVG 핀 → 카카오 MarkerImage (label 있으면 흰 원에 글자) */
+function createPinImage(kakao: any, color: string, label?: string) {
+  const center = label
+    ? `<circle cx="12" cy="12" r="5.5" fill="#fff"/><text x="12" y="15.5" text-anchor="middle" font-size="9" font-weight="700" fill="${color}" font-family="sans-serif">${label}</text>`
+    : `<circle cx="12" cy="12" r="4.5" fill="#fff"/>`;
+
+  const svg = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="35" viewBox="0 0 24 35">
+      <path fill="${color}" stroke="#fff" stroke-width="1.5"
+        d="M12 0C5.4 0 0 5.4 0 12c0 9 12 23 12 23s12-14 12-23C24 5.4 18.6 0 12 0z"/>
+      ${center}
+    </svg>`
+  );
+
+  return new kakao.maps.MarkerImage(
+    `data:image/svg+xml;charset=UTF-8,${svg}`,
+    new kakao.maps.Size(24, 35),
+    { offset: new kakao.maps.Point(12, 35) }
+  );
+}
+
+
+export default function KakaoMap() {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -31,19 +91,23 @@ export default function KakaoMap({enableGrid = true}: Props) {
   const kakaoRef = useRef<any>(null);
   const polygonsRef = useRef<any[]>([]);
   const markersRef = useRef<any[]>([]);
+  const infraCircleRef = useRef<any>(null);
 
   const setBounds = useMapStore((s) => s.setBounds);
   const bounds = useMapStore((s) => s.bounds);
+  const grids = useMapStore((s) => s.grids);
   const setGrids = useMapStore((s) => s.setGrids);
   const setGridsLoading = useMapStore((s) => s.setGridsLoading);
+  const gridsVisible = useMapStore((s) => s.gridsVisible);
+  const visibleGrades = useMapStore((s) => s.visibleGrades);
   //events
   const cityEventMarkersRef = useRef<any[]>([]);
-  const activeCityEventIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setCityEvents = useMapStore((s) => s.setCityEvents);
   const setCityEventsLoading = useMapStore((s) => s.setCityEventsLoading);
   const selectedGridId = useMapStore((s) => s.selectedGridId);
   const setSelectedGridId = useMapStore((s) => s.setSelectedGridId);
-  const infraType = useMapStore((s) => s.infraType);
+  const infraVisible = useMapStore((s) => s.infraVisible);
+  const visibleInfraTypes = useMapStore((s) => s.visibleInfraTypes);
   const setInfrastructures = useMapStore((s) => s.setInfrastructures);
 
   const setGridDetail = useMapStore((s) => s.setGridDetail);
@@ -56,10 +120,30 @@ export default function KakaoMap({enableGrid = true}: Props) {
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
 
+  // 내위치 — 지도에 표시할 사용자 위치 마커 보관
+  const myLocationMarkerRef = useRef<any>(null);
 
-    //admin
-    const mapFocus = useAdminStore((s) => s.mapFocus);
-    const focusMarkerRef = useRef<any>(null);
+  // 내위치 — 파란 핀 생성/이동
+  const updateMyLocationMarker = (lat: number, lng: number) => {
+    const map = mapRef.current;
+    const kakao = kakaoRef.current;
+    if (!map || !kakao) return;
+    const position = new kakao.maps.LatLng(lat, lng);
+    if (myLocationMarkerRef.current) {
+      myLocationMarkerRef.current.setPosition(position);
+      return;
+    }
+    myLocationMarkerRef.current = new kakao.maps.Marker({
+      map,
+      position,
+      title: "내 위치",
+      image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
+    });
+  };
+
+  //admin
+  const mapFocus = useAdminStore((s) => s.mapFocus);
+  const focusMarkerRef = useRef<any>(null);
     
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -79,6 +163,7 @@ export default function KakaoMap({enableGrid = true}: Props) {
       ({ coords }) => {
         clearSelection();
         moveMap(coords.latitude, coords.longitude, 5);
+        updateMyLocationMarker(coords.latitude, coords.longitude); // 내위치 — 파란 핀
       },
       (error) => {
         console.error("현재 위치를 가져오지 못했습니다.", error);
@@ -174,6 +259,7 @@ export default function KakaoMap({enableGrid = true}: Props) {
                 new kakao.maps.LatLng(coords.latitude, coords.longitude)
               );
               map.setLevel(5);
+              updateMyLocationMarker(coords.latitude, coords.longitude); // 내위치 — 최초 파란 핀
             },
             () => {
               // 거부/실패 → 기본 서울 유지
@@ -197,7 +283,7 @@ export default function KakaoMap({enableGrid = true}: Props) {
     };
   }, [setBounds, setMapActions, clearMapActions, clearSelection]);
 
-  // 2) 격자 Polygon + 클릭
+  // 2) 격자 데이터 조회 (bounds 변경 시)
   useEffect(() => {
     if(!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
@@ -213,42 +299,9 @@ export default function KakaoMap({enableGrid = true}: Props) {
           ne_lat: String(bounds.ne_lat),
           ne_lng: String(bounds.ne_lng),
         });
-        const grids = await get<GridItem[]>(`/grids?${params}`);
+        const next = await get<GridItem[]>(`/grids?${params}`);
         if (cancelled) return;
-
-        setGrids(grids);
-
-        const kakao = kakaoRef.current;
-        const map = mapRef.current;
-
-        polygonsRef.current.forEach((p) => p.setMap(null));
-        polygonsRef.current = [];
-
-        grids.forEach((g) => {
-          if (g.lat == null || g.lng == null) return;
-
-          const path = gridRectanglePath(g.lat, g.lng).map(
-            (p) => new kakao.maps.LatLng(p.lat, p.lng)
-          );
-
-          const polygon = new kakao.maps.Polygon({
-            map,
-            path,
-            strokeWeight: 1,
-            strokeColor: safetyGradeColor(g.safety_grade),
-            strokeOpacity: 0.8,
-            fillColor: safetyGradeColor(g.safety_grade),
-            fillOpacity: 0.25,
-          });
-
-          kakao.maps.event.addListener(polygon, "click", () => {
-            const current = useMapStore.getState().selectedGridId;
-            if (current === g.grid_id) clearSelection();
-            else setSelectedGridId(g.grid_id);
-          });
-
-          polygonsRef.current.push(polygon);
-        });
+        setGrids(next);
       } catch (error) {
         console.error(error);
       } finally {
@@ -259,7 +312,64 @@ export default function KakaoMap({enableGrid = true}: Props) {
     return () => {
       cancelled = true;
     };
-  }, [bounds, setGrids, setGridsLoading, setSelectedGridId]);
+  }, [bounds, setGrids, setGridsLoading]);
+
+  // 2b) 격자 Polygon 그리기 (표시 on/off · 등급 필터)
+  useEffect(() => {
+    if (!mapRef.current || !kakaoRef.current) return;
+
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+
+    polygonsRef.current.forEach((p) => p.setMap(null));
+    polygonsRef.current = [];
+
+    if (!gridsVisible) return;
+
+    const gradeSet = new Set(visibleGrades);
+
+    grids.forEach((g) => {
+      if (g.lat == null || g.lng == null) return;
+      // 등급 없는 격자는 미표시 / 꺼진 등급은 스킵
+      if (!isSafetyGrade(g.safety_grade) || !gradeSet.has(g.safety_grade)) {
+        return;
+      }
+
+      const path = gridRectanglePath(g.lat, g.lng).map(
+        (p) => new kakao.maps.LatLng(p.lat, p.lng)
+      );
+
+      const polygon = new kakao.maps.Polygon({
+        map,
+        path,
+        strokeWeight: 1,
+        strokeColor: safetyGradeColor(g.safety_grade),
+        strokeOpacity: 0.8,
+        fillColor: safetyGradeColor(g.safety_grade),
+        fillOpacity: 0.25,
+      });
+
+      kakao.maps.event.addListener(polygon, "click", () => {
+        const store = useMapStore.getState();
+        const current = store.selectedGridId;
+        if (current === g.grid_id) {
+          clearSelection();
+        } else {
+          setSelectedGridId(g.grid_id);
+          store.setSidePanelTab("grid");
+          store.setSidePanelOpen(true);
+        }
+      });
+
+      polygonsRef.current.push(polygon);
+    });
+  }, [
+    grids,
+    gridsVisible,
+    visibleGrades,
+    setSelectedGridId,
+    clearSelection,
+  ]);
 
   //2.5) 뷰포인트 이벤트
   useEffect(() => {
@@ -279,8 +389,6 @@ export default function KakaoMap({enableGrid = true}: Props) {
         setCityEvents(events);
         const kakao = kakaoRef.current;
         const map = mapRef.current;
-        activeCityEventIwRef.current?.iw.close();
-        activeCityEventIwRef.current = null;
         cityEventMarkersRef.current.forEach((m) => m.setMap(null));
         cityEventMarkersRef.current = [];
         events.forEach((e) => {
@@ -289,26 +397,14 @@ export default function KakaoMap({enableGrid = true}: Props) {
             map,
             position: new kakao.maps.LatLng(e.lat, e.lng),
             title: e.title ?? e.type ?? "도시정보",
+            image: createPinImage(kakao, MARKER_COLORS.event), // 행사 - 분홍색
           });
-          const iw = new kakao.maps.InfoWindow({
-            content: `<div style="padding:8px;max-width:220px;">
-            <strong>${e.type ?? ""}</strong><br/>
-            ${e.title ?? ""}<br/>
-            <small>${e.start_at ?? ""} ~ ${e.end_at ?? ""}</small>
-          </div>`,
-          });
+          // InfoWindow 없음 — 왼쪽 패널에서 행사 정보 표시
           kakao.maps.event.addListener(marker, "click", () => {
-            const active = activeCityEventIwRef.current;
-
-            if (active?.id === e.id) {
-              active.iw.close();
-              activeCityEventIwRef.current = null;
-              return;
-            }
-
-            active?.iw.close();
-            iw.open(map, marker);
-            activeCityEventIwRef.current = { id: e.id, iw };
+            const store = useMapStore.getState();
+            store.setSelectedEventId(e.id);
+            store.setSidePanelTab("events");
+            store.setSidePanelOpen(true);
           });
           cityEventMarkersRef.current.push(marker);
         });
@@ -358,6 +454,7 @@ export default function KakaoMap({enableGrid = true}: Props) {
             map,
             position: new kakao.maps.LatLng(r.lat, r.lng),
             title: r.type ?? "제보",
+            image: createPinImage(kakao, MARKER_COLORS.report), // report — 붉은색
           });
 
           const iw = new kakao.maps.InfoWindow({
@@ -394,11 +491,26 @@ export default function KakaoMap({enableGrid = true}: Props) {
     };
   }, [bounds, setReports, setReportsLoading]);
 
-  // 3) 선택 격자 → 인프라 전체 로드 + 필터된 마커
+  // 3) 지도 중심+반경 → 인프라 마커 (격자 비종속)
   useEffect(() => {
-    if (!selectedGridId || !mapRef.current || !kakaoRef.current) {
+    const clearInfra = () => {
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current = [];
+      if (infraCircleRef.current) {
+        infraCircleRef.current.setMap(null);
+        infraCircleRef.current = null;
+      }
+    };
+
+    if (!bounds || !mapRef.current || !kakaoRef.current) {
+      clearInfra();
+      return;
+    }
+
+    // 전체 OFF → API 없이 마커·원 전부 제거
+    if (!infraVisible) {
+      clearInfra();
+      setInfrastructures([]);
       return;
     }
 
@@ -406,36 +518,64 @@ export default function KakaoMap({enableGrid = true}: Props) {
 
     (async () => {
       try {
-        // 항상 전체 (집계용)
+        const kakao = kakaoRef.current;
+        const map = mapRef.current;
+        const center = map.getCenter();
+        const lat = center.getLat();
+        const lng = center.getLng();
+        const level = map.getLevel();
+        const radius_m = levelToRadiusM(level);
+
+        const params = new URLSearchParams({
+          lat: String(lat),
+          lng: String(lng),
+          radius_m: String(radius_m),
+        });
+
         const items = await get<InfrastructureItem[]>(
-          `/grids/${selectedGridId}/infrastructures`
+          `/infrastructures?${params}`
         );
         if (cancelled) return;
 
-        setInfrastructures(items);
+        const typeSet = new Set(visibleInfraTypes);
+        const filtered = items.filter(
+          (item) => item.type != null && typeSet.has(item.type as InfraType)
+        );
 
-        const kakao = kakaoRef.current;
-        const map = mapRef.current;
+        setInfrastructures(filtered);
 
-        markersRef.current.forEach((m) => m.setMap(null));
-        markersRef.current = [];
+        clearInfra();
 
-        // 마커만 필터
-        const visible =
-          infraType == null
-            ? items
-            : items.filter((i) => i.type === infraType);
-
-        visible.forEach((item) => {
+        filtered.forEach((item) => {
           if (item.lat == null || item.lng == null) return;
 
           const marker = new kakao.maps.Marker({
             map,
             position: new kakao.maps.LatLng(item.lat, item.lng),
             title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
+            image: createPinImage(
+              kakao,
+              infraColor(item.type),
+              infraLabel(item.type)
+            ),
           });
           markersRef.current.push(marker);
         });
+
+        // DEBUG: 조회 반경 원
+        if (DEBUG_INFRA_RANGE_CIRCLE) {
+          infraCircleRef.current = new kakao.maps.Circle({
+            map,
+            center: new kakao.maps.LatLng(lat, lng),
+            radius: radius_m,
+            strokeWeight: 2,
+            strokeColor: "#16a34a",
+            strokeOpacity: 0.7,
+            strokeStyle: "dashed",
+            fillColor: "#16a34a",
+            fillOpacity: 0,
+          });
+        }
       } catch (error) {
         console.error(error);
       }
@@ -444,9 +584,9 @@ export default function KakaoMap({enableGrid = true}: Props) {
     return () => {
       cancelled = true;
     };
-  }, [selectedGridId, infraType, setInfrastructures]);
+  }, [bounds, infraVisible, visibleInfraTypes, setInfrastructures]);
 
-  // 4) 선택 격자 → 인포카드 detail
+  // 4) 선택 격자 → 인포카드 detail (인프라 마커와 분리)
   useEffect(() => {
     if (!selectedGridId) {
       setGridDetail(null);
