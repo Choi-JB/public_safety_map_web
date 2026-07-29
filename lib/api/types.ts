@@ -60,13 +60,21 @@ export type GridBoundsQuery = {
 /** 인프라 타입 (쿼리 ?type=) */
 export type InfraType = "CCTV" | "경찰서" | "소방서" | "편의점";
 
-/** GET /grids/{id}/infrastructures 항목 */
+/** GET /grids/{id}/infrastructures 및 GET /infrastructures 항목 */
 export type InfrastructureItem = {
   id: number;
   type: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
+};
+
+/** GET /infrastructures?lat&lng&radius_m&type= */
+export type InfraRadiusQuery = {
+  lat: number;
+  lng: number;
+  radius_m: number;
+  type?: InfraType;
 };
 
 /** GET /grids/{id}/detail 최근 피드백(feedback 테이블) */
