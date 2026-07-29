@@ -129,6 +129,11 @@
 }
 
 .mapBody {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  display: grid;
+  place-items: center;
   flex: 1;
   display: grid;
   place-items: center;

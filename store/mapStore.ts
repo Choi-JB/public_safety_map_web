@@ -95,6 +95,9 @@ type MapState = {
   moveToCurrentLocation: MapActions["moveToCurrentLocation"] | null;
   setMapActions: (actions: MapActions) => void;
   clearMapActions: () => void;
+  //admin
+  interactive: boolean;
+  setInteractive: (interactive: boolean) => void;
 };
 
 export const useMapStore = create<MapState>((set) => ({
@@ -172,4 +175,7 @@ export const useMapStore = create<MapState>((set) => ({
       searchAddress: null,
       moveToCurrentLocation: null,
     }),
+  //admin
+  interactive: true,
+  setInteractive: (interactive) => set({ interactive }),
 }));
