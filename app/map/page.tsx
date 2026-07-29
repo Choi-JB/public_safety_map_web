@@ -3,10 +3,10 @@
 import KakaoMap from "./kakaoMap";
 import { AuthEntry } from "@/components/login/AuthEntry";
 import MapControls from "./MapControls";
-import GridInfoCard from "./GridInfoCard";
 import CityEventsPanel from "./CityEventsPanel";
 
 // 담당: 지도표시팀
+// GridInfoCard → CityEventsPanel 격자 탭으로 통합
 
 export default function MapPage() {
   return (
@@ -15,7 +15,6 @@ export default function MapPage() {
       <CityEventsPanel />
       <KakaoMap />
       <MapControls />
-      <GridInfoCard />
     </div>
   );
 }

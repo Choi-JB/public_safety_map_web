@@ -1,136 +1,377 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { InfraType } from "@/lib/api/types";
-import { useMapStore } from "@/store/mapStore";
+import {
+  SAFETY_GRADES,
+  safetyGradeColor,
+  type SafetyGrade,
+} from "@/app/map/gridStyle";
+import {
+  INFRA_TYPES,
+  SIDE_DETAIL_WIDTH,
+  SIDE_PANEL_GAP,
+  SIDE_PANEL_SLIDE_MS,
+  SIDE_RAIL_WIDTH,
+  useMapStore,
+} from "@/store/mapStore";
 
-const INFRA_TYPES: Array<InfraType | null> = [
-  null,
-  "CCTV",
-  "경찰서",
-  "소방서",
-  "편의점",
-];
-
-const CITY_PRESETS = [
-  { name: "서울", lat: 37.5665, lng: 126.978 },
-  { name: "부산", lat: 35.1796, lng: 129.0756 },
-  { name: "대구", lat: 35.8714, lng: 128.6014 },
-  { name: "인천", lat: 37.4563, lng: 126.7052 },
-  { name: "광주", lat: 35.1595, lng: 126.8526 },
-  { name: "대전", lat: 36.3504, lng: 127.3845 },
-  { name: "울산", lat: 35.5384, lng: 129.3114 },
-  { name: "제주", lat: 33.4996, lng: 126.5312 },
-] as const;
-
-function infraTypeLabel(t: InfraType | null) {
-  return t === null ? "전체" : t;
+function infraColorDot(type: InfraType) {
+  switch (type) {
+    case "CCTV":
+      return "#0f766e";
+    case "경찰서":
+      return "#1d4ed8";
+    case "소방서":
+      return "#ea580c";
+    case "편의점":
+      return "#65a30d";
+  }
 }
 
-const btnStyle: React.CSSProperties = {
-  padding: "4px 8px",
-  border: "1px solid #ccc",
+function nearbyChipLabel(
+  infraVisible: boolean,
+  visibleInfraTypes: InfraType[]
+) {
+  if (!infraVisible) return "주변 · 숨김";
+  if (visibleInfraTypes.length === INFRA_TYPES.length) return "주변";
+  if (visibleInfraTypes.length === 0) return "주변 · 없음";
+  if (visibleInfraTypes.length === 1) return `주변 · ${visibleInfraTypes[0]}`;
+  return `주변 · ${visibleInfraTypes.length}종`;
+}
+
+function gridChipLabel(
+  gridsVisible: boolean,
+  visibleGrades: SafetyGrade[]
+) {
+  if (!gridsVisible) return "격자 · 숨김";
+  if (visibleGrades.length === SAFETY_GRADES.length) return "격자";
+  if (visibleGrades.length === 0) return "격자 · 없음";
+  if (visibleGrades.length === 1) return `격자 · ${visibleGrades[0]}`;
+  return `격자 · ${visibleGrades.length}종`;
+}
+
+/** 분리된 칩(카드) 공통 스타일 */
+const chipStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  background: "#fff",
+  padding: "6px 8px",
+  borderRadius: 8,
+  boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+};
+
+/** 검색·내 위치·주변 공통 버튼 크기 (검색 기준) */
+const actionBtnStyle: CSSProperties = {
+  padding: "6px 10px",
+  border: "1px solid #e5e7eb",
   borderRadius: 6,
   background: "#fff",
   cursor: "pointer",
   fontSize: 12,
+  whiteSpace: "nowrap",
+  height: 28,
+  boxSizing: "border-box",
+  lineHeight: 1,
 };
 
+/**
+ * 지도 상단 컨트롤
+ * - 검색 / 내 위치 / 주변 / 격자 — 분리된 칩
+ * - 왼쪽 사이드 패널 열림에 맞춰 left가 같이 슬라이드
+ */
 export default function MapControls() {
   const [query, setQuery] = useState("");
+  const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [gridOpen, setGridOpen] = useState(false);
 
   const searchAddress = useMapStore((s) => s.searchAddress);
   const moveToCurrentLocation = useMapStore((s) => s.moveToCurrentLocation);
-  const moveTo = useMapStore((s) => s.moveTo);
-  const infraType = useMapStore((s) => s.infraType);
-  const setInfraType = useMapStore((s) => s.setInfraType);
-  const selectedGridId = useMapStore((s) => s.selectedGridId);
+  const sidePanelOpen = useMapStore((s) => s.sidePanelOpen);
+  const infraVisible = useMapStore((s) => s.infraVisible);
+  const visibleInfraTypes = useMapStore((s) => s.visibleInfraTypes);
+  const setInfraVisible = useMapStore((s) => s.setInfraVisible);
+  const toggleVisibleInfraType = useMapStore((s) => s.toggleVisibleInfraType);
+  const gridsVisible = useMapStore((s) => s.gridsVisible);
+  const visibleGrades = useMapStore((s) => s.visibleGrades);
+  const setGridsVisible = useMapStore((s) => s.setGridsVisible);
+  const toggleVisibleGrade = useMapStore((s) => s.toggleVisibleGrade);
 
   const onSearch = () => searchAddress?.(query);
+
+  const left =
+    SIDE_RAIL_WIDTH +
+    (sidePanelOpen ? SIDE_DETAIL_WIDTH : 0) +
+    SIDE_PANEL_GAP;
 
   return (
     <div
       style={{
         position: "absolute",
         top: 12,
-        left: 12,
+        left,
         zIndex: 10,
         display: "flex",
-        gap: 6,
+        gap: 8,
         flexWrap: "wrap",
-        alignItems: "center",
-        background: "#fff",
-        padding: 8,
-        borderRadius: 8,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+        alignItems: "flex-start",
+        transition: `left ${SIDE_PANEL_SLIDE_MS}ms ease`,
       }}
     >
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onSearch();
-        }}
-        placeholder="주소 또는 장소 검색"
-        style={{
-          padding: "4px 8px",
-          border: "1px solid #ccc",
-          borderRadius: 6,
-          fontSize: 12,
-          width: 180,
-        }}
-      />
-      <button type="button" onClick={onSearch} style={btnStyle}>
-        검색
-      </button>
-
-      <button
-        type="button"
-        onClick={() => moveToCurrentLocation?.()}
-        style={btnStyle}
-      >
-        내 위치
-      </button>
-
-      <select
-        defaultValue=""
-        onChange={(e) => {
-          const city = CITY_PRESETS.find((c) => c.name === e.target.value);
-          if (city) moveTo?.(city.lat, city.lng, 6);
-          e.target.value = "";
-        }}
-        style={{ ...btnStyle, background: "#fff" }}
-      >
-        <option value="" disabled>
-          도시 이동
-        </option>
-        {CITY_PRESETS.map((city) => (
-          <option key={city.name} value={city.name}>
-            {city.name}
-          </option>
-        ))}
-      </select>
-
-      {INFRA_TYPES.map((t) => (
-        <button
-          key={infraTypeLabel(t)}
-          type="button"
-          onClick={() => setInfraType(t)}
-          style={{
-            ...btnStyle,
-            border: infraType === t ? "2px solid #2563eb" : "1px solid #ccc",
-            background: infraType === t ? "#eff6ff" : "#fff",
+      {/* 검색 */}
+      <div style={chipStyle}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSearch();
           }}
-        >
-          {infraTypeLabel(t)}
+          placeholder="주소 또는 장소 검색"
+          style={{
+            padding: "4px 8px",
+            border: "1px solid #e5e7eb",
+            borderRadius: 6,
+            fontSize: 12,
+            width: 180,
+            height: 28,
+            boxSizing: "border-box",
+            outline: "none",
+          }}
+        />
+        <button type="button" onClick={onSearch} style={actionBtnStyle}>
+          검색
         </button>
-      ))}
+      </div>
 
-      {selectedGridId != null && (
-        <span style={{ fontSize: 12, marginLeft: 4 }}>
-          선택 격자: {selectedGridId}
-        </span>
-      )}
+      {/* 내 위치 */}
+      <div style={chipStyle}>
+        <button
+          type="button"
+          onClick={() => moveToCurrentLocation?.()}
+          style={actionBtnStyle}
+        >
+          내 위치
+        </button>
+      </div>
+
+      {/* 주변 → 표시 on/off + 타입 토글 */}
+      <div style={{ position: "relative" }}>
+        <div style={chipStyle}>
+          <button
+            type="button"
+            onClick={() => {
+              setNearbyOpen((v) => !v);
+              setGridOpen(false);
+            }}
+            aria-expanded={nearbyOpen}
+            style={{
+              ...actionBtnStyle,
+              border: nearbyOpen ? "1px solid #2563eb" : actionBtnStyle.border,
+              background: nearbyOpen ? "#eff6ff" : "#fff",
+            }}
+          >
+            {nearbyChipLabel(infraVisible, visibleInfraTypes)}
+          </button>
+        </div>
+
+        {nearbyOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              marginTop: 6,
+              minWidth: 148,
+              background: "#fff",
+              borderRadius: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              padding: 8,
+              zIndex: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setInfraVisible(!infraVisible)}
+              style={{
+                ...actionBtnStyle,
+                width: "100%",
+                height: "auto",
+                textAlign: "left",
+                border: infraVisible
+                  ? "1px solid #2563eb"
+                  : "1px solid transparent",
+                background: infraVisible ? "#eff6ff" : "#fff",
+                fontWeight: 600,
+              }}
+            >
+              주변 표시 {infraVisible ? "ON" : "OFF"}
+            </button>
+
+            <div
+              style={{
+                height: 1,
+                background: "#e5e7eb",
+                margin: "2px 0",
+              }}
+            />
+
+            {INFRA_TYPES.map((type) => {
+              const on = visibleInfraTypes.includes(type);
+              const disabled = !infraVisible;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleVisibleInfraType(type)}
+                  style={{
+                    ...actionBtnStyle,
+                    width: "100%",
+                    height: "auto",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    opacity: disabled ? 0.45 : 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    border:
+                      on && !disabled
+                        ? "1px solid #2563eb"
+                        : "1px solid transparent",
+                    background: on && !disabled ? "#eff6ff" : "#fff",
+                    fontWeight: on ? 600 : 400,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 2,
+                      background: infraColorDot(type),
+                      flexShrink: 0,
+                    }}
+                  />
+                  {type}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 격자 → 표시 on/off + 등급 필터 */}
+      <div style={{ position: "relative" }}>
+        <div style={chipStyle}>
+          <button
+            type="button"
+            onClick={() => {
+              setGridOpen((v) => !v);
+              setNearbyOpen(false);
+            }}
+            aria-expanded={gridOpen}
+            style={{
+              ...actionBtnStyle,
+              border: gridOpen ? "1px solid #2563eb" : actionBtnStyle.border,
+              background: gridOpen ? "#eff6ff" : "#fff",
+            }}
+          >
+            {gridChipLabel(gridsVisible, visibleGrades)}
+          </button>
+        </div>
+
+        {gridOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              marginTop: 6,
+              minWidth: 148,
+              background: "#fff",
+              borderRadius: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              padding: 8,
+              zIndex: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setGridsVisible(!gridsVisible)}
+              style={{
+                ...actionBtnStyle,
+                width: "100%",
+                height: "auto",
+                textAlign: "left",
+                border: gridsVisible
+                  ? "1px solid #2563eb"
+                  : "1px solid transparent",
+                background: gridsVisible ? "#eff6ff" : "#fff",
+                fontWeight: 600,
+              }}
+            >
+              격자 표시 {gridsVisible ? "ON" : "OFF"}
+            </button>
+
+            <div
+              style={{
+                height: 1,
+                background: "#e5e7eb",
+                margin: "2px 0",
+              }}
+            />
+
+            {SAFETY_GRADES.map((grade) => {
+              const on = visibleGrades.includes(grade);
+              const disabled = !gridsVisible;
+              return (
+                <button
+                  key={grade}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleVisibleGrade(grade)}
+                  style={{
+                    ...actionBtnStyle,
+                    width: "100%",
+                    height: "auto",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    opacity: disabled ? 0.45 : 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    border:
+                      on && !disabled
+                        ? "1px solid #2563eb"
+                        : "1px solid transparent",
+                    background: on && !disabled ? "#eff6ff" : "#fff",
+                    fontWeight: on ? 600 : 400,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 2,
+                      background: safetyGradeColor(grade),
+                      flexShrink: 0,
+                    }}
+                  />
+                  {grade}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
