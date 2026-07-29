@@ -10,7 +10,7 @@ import CityEventsPanel from "./CityEventsPanel";
 
 export default function MapPage() {
   return (
-    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+    <div style={{ position: "relative", width: "100%", height: "100vh",overflow: "hidden"}}>
       <AuthEntry />
       <CityEventsPanel />
       <KakaoMap />
