@@ -24,6 +24,7 @@ type Props = {
 }
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
+const CENTER_EVENT_RADIUS_KM = 10; // 행사 패널 표시 반경
 
 // 마커 종류별 색상 정의
 const MARKER_COLORS = {
@@ -85,7 +86,17 @@ function createPinImage(kakao: any, color: string, label?: string) {
     { offset: new kakao.maps.Point(12, 35) }
   );
 }
-
+function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 
 export default function KakaoMap({ enableGrid = true, interactive = true }: Props) {
@@ -122,7 +133,6 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
 
   //reports
   const reportMarkersRef = useRef<any[]>([]);
-  const activeReportIwRef = useRef<{ id: number; iw: any } | null>(null);
   const setReports = useMapStore((s) => s.setReports);
   const setReportsLoading = useMapStore((s) => s.setReportsLoading);
 
@@ -388,20 +398,36 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
     (async () => {
       try {
         setCityEventsLoading(true);
+
+        const center = mapRef.current.getCenter();
+        const lat = center.getLat();
+        const lng = center.getLng();
+        const dLat = CENTER_EVENT_RADIUS_KM / 111.32;
+        const dLng =
+          CENTER_EVENT_RADIUS_KM /
+          (111.32 * Math.cos((lat * Math.PI) / 180));
         const params = new URLSearchParams({
-          sw_lat: String(bounds.sw_lat),
-          sw_lng: String(bounds.sw_lng),
-          ne_lat: String(bounds.ne_lat),
-          ne_lng: String(bounds.ne_lng),
+          sw_lat: String(lat - dLat),
+          sw_lng: String(lng - dLng),
+          ne_lat: String(lat + dLat),
+          ne_lng: String(lng + dLng),
         });
+
         const events = await get<CityEventItem[]>(`/city-events?${params}`);
         if (cancelled) return;
-        setCityEvents(events);
+
+        const nearby = events.filter(
+          (e) =>
+            e.lat != null &&
+            e.lng != null &&
+            distKm(lat, lng, e.lat, e.lng) <= CENTER_EVENT_RADIUS_KM
+        );
+        setCityEvents(nearby);
         const kakao = kakaoRef.current;
         const map = mapRef.current;
         cityEventMarkersRef.current.forEach((m) => m.setMap(null));
         cityEventMarkersRef.current = [];
-        events.forEach((e) => {
+        nearby.forEach((e) => {
           if (e.lat == null || e.lng == null) return;
           const marker = new kakao.maps.Marker({
             map,
@@ -438,26 +464,35 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
     (async () => {
       try {
         setReportsLoading(true);
+        const center = mapRef.current.getCenter();
+        const lat = center.getLat();
+        const lng = center.getLng();
+        const dLat = CENTER_EVENT_RADIUS_KM / 111.32;
+        const dLng =
+          CENTER_EVENT_RADIUS_KM /
+          (111.32 * Math.cos((lat * Math.PI) / 180));
         const params = new URLSearchParams({
-          sw_lat: String(bounds.sw_lat),
-          sw_lng: String(bounds.sw_lng),
-          ne_lat: String(bounds.ne_lat),
-          ne_lng: String(bounds.ne_lng),
+          sw_lat: String(lat - dLat),
+          sw_lng: String(lng - dLng),
+          ne_lat: String(lat + dLat),
+          ne_lng: String(lng + dLng),
         });
         const reports = await get<ReportItem[]>(`/reports?${params}`);
         if (cancelled) return;
 
-        setReports(reports);
-
+        const nearby = reports.filter(
+          (r) =>
+            r.lat != null &&
+            r.lng != null &&
+            distKm(lat, lng, r.lat, r.lng) <= CENTER_EVENT_RADIUS_KM
+        );
+        setReports(nearby);
         const kakao = kakaoRef.current;
         const map = mapRef.current;
-
-        activeReportIwRef.current?.iw.close();
-        activeReportIwRef.current = null;
         reportMarkersRef.current.forEach((m) => m.setMap(null));
         reportMarkersRef.current = [];
 
-        reports.forEach((r) => {
+        nearby.forEach((r) => {
           if (r.lat == null || r.lng == null) return;
 
           const marker = new kakao.maps.Marker({
@@ -467,25 +502,13 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
             image: createPinImage(kakao, MARKER_COLORS.report), // report — 붉은색
           });
 
-          const iw = new kakao.maps.InfoWindow({
-            content: `<div style="padding:8px;max-width:220px;">
-            <strong>${r.type ?? "제보"}</strong><br/>
-            ${r.description ?? ""}<br/>
-            <small>${r.user_nickname ?? ""} · ~${r.expire_at ?? ""}</small>
-          </div>`,
+          kakao.maps.event.addListener(marker, "click", () => {
+            const store = useMapStore.getState();
+            store.setSelectedReportId(r.id);
+            store.setSidePanelTab("reports");
+            store.setSidePanelOpen(true);
           });
 
-          kakao.maps.event.addListener(marker, "click", () => {
-            const active = activeReportIwRef.current;
-            if (active?.id === r.id) {
-              active.iw.close();
-              activeReportIwRef.current = null;
-              return;
-            }
-            active?.iw.close();
-            iw.open(map, marker);
-            activeReportIwRef.current = { id: r.id, iw };
-          });
 
           reportMarkersRef.current.push(marker);
         });
