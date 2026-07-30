@@ -11,6 +11,17 @@ import { get } from "@/lib/api/client";
 import type { CityEventItem, InfrastructureItem } from "@/lib/api/types";
 import styles from "./CityEventsPanel.module.css";
 
+
+/** description에서 "장소:" 이후(주소 블록) 제거 */
+function stripPlaceFromDescription(description: string | null) {
+  if (!description) return null;
+  const idx = description.search(/\n?\s*장소\s*:/);
+  const text = (idx >= 0 ? description.slice(0, idx) : description)
+    .replace(/\+/g, ", ")
+    .trim();
+  return text.length > 0 ? text : null;
+}
+
 /** 3일 이내 시작 예정 배지 기준 */
 const SOON_DAYS = 3;
 const HANDLE_WIDTH = 14;
@@ -454,6 +465,22 @@ export default function CityEventsPanel() {
                       <div style={{ fontSize: 12, color: "#374151", marginTop: 6 }}>
                         {formatDateTime(e.start_at)} ~ {formatDateTime(e.end_at)}
                       </div>
+                      {(() => {
+                        const desc = stripPlaceFromDescription(e.description);
+                        return desc ? (
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "#6b7280",
+                              marginTop: 6,
+                              whiteSpace: "pre-line",
+                            }}
+                          >
+                            {desc}
+                          </div>
+                        ) : null;
+                      })()}
+                      
                     </button>
                   );
                 })}
@@ -501,6 +528,21 @@ export default function CityEventsPanel() {
                         <div style={{ fontSize: 12, color: "#374151", marginTop: 6 }}>
                           {formatDateTime(e.start_at)} ~ {formatDateTime(e.end_at)}
                         </div>
+                        {(() => {
+                          const desc = stripPlaceFromDescription(e.description);
+                          return desc ? (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#6b7280",
+                                marginTop: 6,
+                                whiteSpace: "pre-line",
+                              }}
+                            >
+                              {desc}
+                            </div>
+                          ) : null;
+                        })()}
                       </button>
                     );
                   })}
