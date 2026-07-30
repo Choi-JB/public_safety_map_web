@@ -15,12 +15,8 @@ import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle";
 import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
 import { useMapStore } from "@/store/mapStore";
-import { useAdminStore } from "@/store/adminStore";
 
 const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
-type Props = {
-  adminMode?: boolean; //기본 false - true면 관리자 페이지에서 사용
-}
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
@@ -87,7 +83,7 @@ function createPinImage(kakao: any, color: string, label?: string) {
 
 
 
-export default function KakaoMap({ adminMode = false }: Props) {
+export default function KakaoMap() {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -145,13 +141,6 @@ export default function KakaoMap({ adminMode = false }: Props) {
       image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
     });
   };
-
-  //admin
-  const mapFocus = useAdminStore((s) => s.mapFocus);
-  const setMapFocus = useAdminStore((s) => s.setMapFocus);
-  const focusMarkerRef = useRef<any>(null);
-  const interactive = useMapStore((s) => s.interactive);
-  const setInteractive = useMapStore((s) => s.setInteractive);
 
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -626,49 +615,6 @@ export default function KakaoMap({ adminMode = false }: Props) {
     };
   }, [selectedGridId, setGridDetail, setDetailLoading]);
 
-  //관리자페이지 mapFocus 변경 시 지도 이동
-  useEffect(() => {
-    const kakao = kakaoRef.current;
-    const map = mapRef.current;
-    if (!kakao || !map) return;
-
-    // 이전 포커스 마커 제거
-    //focusMarkerRef.current?.setMap(null);
-    //focusMarkerRef.current = null;
-
-    if (!mapFocus) return;
-
-    moveMap(mapFocus.lat, mapFocus.lng, 2);
-
-    var marker = new kakao.maps.Marker({
-      map,
-      position: new kakao.maps.LatLng(mapFocus.lat, mapFocus.lng),
-      title: mapFocus.description,
-    });
-    focusMarkerRef.current = marker;
-    return () => {
-      focusMarkerRef.current?.setMap(null);
-      focusMarkerRef.current = null;
-    };
-  }, [mapFocus]);
-
-  // 관리자 페이지에서 지도 조작 불가능 하도록 (interactive 변경 시 드래그/줌 on/off)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if(adminMode){
-      map.setDraggable(interactive);
-      map.setZoomable(interactive);
-    }
-    return () => {
-      map.setDraggable(true);
-      map.setZoomable(true);
-    };
-  }, [interactive, adminMode]);
-
-  //클릭한 위치 좌표 정보 가져오기(관리자 페이지에서 사용)
-  // useEffect(() => {
-  // }, []);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 
