@@ -98,6 +98,7 @@ type MapState = {
   moveToCurrentLocation: MapActions["moveToCurrentLocation"] | null;
   setMapActions: (actions: MapActions) => void;
   clearMapActions: () => void;
+
 };
 
 export const useMapStore = create<MapState>((set) => ({
@@ -179,4 +180,5 @@ export const useMapStore = create<MapState>((set) => ({
       searchAddress: null,
       moveToCurrentLocation: null,
     }),
+
 }));

@@ -16,6 +16,7 @@ import {
   useMapStore,
 } from "@/store/mapStore";
 
+
 function infraColorDot(type: InfraType) {
   switch (type) {
     case "CCTV":
@@ -76,12 +77,17 @@ const actionBtnStyle: CSSProperties = {
   lineHeight: 1,
 };
 
+
+type MapControlsProps = {
+  adminMode?: boolean;
+};
+
 /**
  * 지도 상단 컨트롤
  * - 검색 / 내 위치 / 주변 / 격자 — 분리된 칩
  * - 왼쪽 사이드 패널 열림에 맞춰 left가 같이 슬라이드
  */
-export default function MapControls() {
+export default function MapControls({ adminMode = false }: MapControlsProps) {
   const [query, setQuery] = useState("");
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [gridOpen, setGridOpen] = useState(false);
@@ -100,10 +106,12 @@ export default function MapControls() {
 
   const onSearch = () => searchAddress?.(query);
 
-  const left =
-    SIDE_RAIL_WIDTH +
-    (sidePanelOpen ? SIDE_DETAIL_WIDTH : 0) +
-    SIDE_PANEL_GAP;
+  const left = adminMode
+    ? 12
+    : SIDE_RAIL_WIDTH +
+      (sidePanelOpen ? SIDE_DETAIL_WIDTH : 0) +
+      SIDE_PANEL_GAP;
+
 
   return (
     <div
@@ -111,12 +119,16 @@ export default function MapControls() {
         position: "absolute",
         top: 12,
         left,
+        right: adminMode ? 12 : undefined,
+        maxWidth: adminMode ? "calc(100% - 24px)" : undefined,
         zIndex: 10,
         display: "flex",
         gap: 8,
         flexWrap: "wrap",
         alignItems: "flex-start",
-        transition: `left ${SIDE_PANEL_SLIDE_MS}ms ease`,
+        transition: adminMode
+          ? undefined
+          : `left ${SIDE_PANEL_SLIDE_MS}ms ease`,
       }}
     >
       {/* 검색 */}

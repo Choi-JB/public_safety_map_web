@@ -15,13 +15,8 @@ import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle";
 import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
 import { useMapStore } from "@/store/mapStore";
-import { useAdminStore } from "@/store/adminStore";
 
 const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
-type Props = {
-  enableGrid?: boolean; //기본 true
-  interactive?: boolean; //기본 true - false면 드래그/줌 불가
-}
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 const CENTER_EVENT_RADIUS_KM = 10; // 행사 패널 표시 반경
@@ -99,7 +94,7 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 
-export default function KakaoMap({ enableGrid = true, interactive = true }: Props) {
+export default function KakaoMap() {
   const setMapActions = useMapStore((s) => s.setMapActions);
   const clearMapActions = useMapStore((s) => s.clearMapActions);
 
@@ -156,10 +151,6 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
       image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
     });
   };
-
-  //admin
-  const mapFocus = useAdminStore((s) => s.mapFocus);
-  const focusMarkerRef = useRef<any>(null);
 
   const moveMap = (lat: number, lng: number, level = 6) => {
     const map = mapRef.current;
@@ -238,9 +229,7 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
         map.setMaxLevel(MAX_ZOOM_OUT);
         mapRef.current = map;
 
-        //관리자 페이지에서 드래그/줌 불가 설정
-        map.setDraggable(interactive);
-        map.setZoomable(interactive);
+
 
         setMapActions({
           moveTo: (lat, lng, level = 6) => {
@@ -305,7 +294,6 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
 
   // 2) 격자 데이터 조회 (bounds 변경 시)
   useEffect(() => {
-    if (!enableGrid) return;
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
@@ -457,6 +445,7 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
 
   // 2.6) viewport reports
   useEffect(() => {
+   
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
 
     let cancelled = false;
@@ -649,35 +638,6 @@ export default function KakaoMap({ enableGrid = true, interactive = true }: Prop
     };
   }, [selectedGridId, setGridDetail, setDetailLoading]);
 
-  //관리자페이지 mapFocus 변경 시 지도 이동
-  useEffect(() => {
-    const kakao = kakaoRef.current;
-    const map = mapRef.current;
-    if (!kakao || !map) return;
-
-    // 이전 포커스 마커 제거
-    focusMarkerRef.current?.setMap(null);
-    focusMarkerRef.current = null;
-
-    if (!mapFocus) return;
-
-    moveMap(mapFocus.lat, mapFocus.lng, 6);
-
-    var marker = new kakao.maps.Marker({
-      map,
-      position: new kakao.maps.LatLng(mapFocus.lat, mapFocus.lng),
-      title: mapFocus.description,
-    });
-    focusMarkerRef.current = marker;
-  }, [mapFocus]);
-
-  // interactive 변경 시 드래그/줌 on/off
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    map.setDraggable(interactive);
-    map.setZoomable(interactive);
-  }, [interactive]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 

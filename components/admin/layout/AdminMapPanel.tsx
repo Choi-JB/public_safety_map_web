@@ -6,21 +6,16 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/store/adminStore";
 import { BackIcon } from "../shared/BackIcon";
 import styles from "../admin.module.css";
-import KakaoMap from "@/app/map/kakaoMap";
 
+import MapControls  from "@/app/map/MapControls";
+
+import AdminMap from "../shared/AdminMap";
 
 export function AdminMapPanel() {
   const router = useRouter();
 
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const tab = useAdminStore((s) => s.tab);
-  // 제보·도시정보(원하면 피드백도)에서는 지도 조작 잠금
-  // 마커 등록 탭은 좌표 선택이 필요할 수 있어 열어 둠
-  const interactive = !(
-    tab === "reports" ||
-    tab === "city-events" ||
-    tab === "feedbacks"
-  ); //지도 조작 잠금할 페이지 목록
   
   const backToMap = () => {
     setMapFocus(null);
@@ -39,8 +34,12 @@ export function AdminMapPanel() {
           <span>지도 화면으로 돌아가기</span>
         </button>
       </div>
-      <div className={styles.mapBody}>
-        <KakaoMap enableGrid={false} interactive={interactive} />
+      {/* 관리자 페이지에서 지도 조작 불가능 하도록 (pointerEvents 변경 시 드래그/줌 on/off) */}
+      <div  
+        className={styles.mapBody} 
+        style={{ pointerEvents: tab === "markers" ? "auto" : "none" }}
+      >
+        <AdminMap />
 
       </div>
     </section>

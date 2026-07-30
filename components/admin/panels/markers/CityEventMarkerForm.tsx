@@ -2,12 +2,13 @@
 
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import styles from "../../admin.module.css";
 import { ImageAttachField } from "../../shared/ImageAttachField";
 import { isValidYmd, ScheduleRow } from "../../shared/ScheduleRow";
 import { useAuthStore } from "@/store/authStore";
+import { useMapStore } from "@/store/mapStore";
 
 const CITY_TYPE_OPTIONS = ["행사", "인파 밀집", "교통 통제", "기타"] as const;
 const DEFAULT_START_TIME = "09:00";
@@ -17,6 +18,7 @@ type FormState = {
   type: string;
   title: string;
   description: string;
+  grid_id: string;
   lat: string;
   lng: string;
   startDate: string;
@@ -29,6 +31,7 @@ const emptyForm: FormState = {
   type: "",
   title: "",
   description: "",
+  grid_id: "",
   lat: "",
   lng: "",
   startDate: "",
@@ -46,8 +49,11 @@ export function CityEventMarkerForm() {
   const submitCityEvent = useAdminStore((s) => s.submitCityEvent);
   const loading = useAdminStore((s) => s.loading);
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const setMapFocus = useAdminStore((s) => s.setMapFocus);
+  const searchAddress = useMapStore((s) => s.searchAddress);
   const { user } = useAuthStore();
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [searchQuery, setSearchQuery] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageKey, setImageKey] = useState(0);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -68,6 +74,7 @@ export function CityEventMarkerForm() {
       ...prev,
       lat: String(mapFocus.lat),
       lng: String(mapFocus.lng),
+      grid_id: mapFocus.grid_id ? String(mapFocus.grid_id) : "none",
     }));
     setLocalError(null);
   }
@@ -105,7 +112,7 @@ export function CityEventMarkerForm() {
     void imageFile;
 
     await submitCityEvent({
-      id: user?.id?.toString() || undefined,
+      id: user?.id ? Number(user.id) : undefined,
       type: form.type,
       title: form.title.trim(),
       description: form.description.trim(),
@@ -120,12 +127,93 @@ export function CityEventMarkerForm() {
     if (!error) resetForm();
   }
 
+  useEffect(() => {
+    if (mapFocus) {
+      setForm((prev) => ({
+        ...prev,
+        lat: String(mapFocus.lat),
+        lng: String(mapFocus.lng),
+        grid_id: mapFocus.grid_id ? String(mapFocus.grid_id) : "none",
+      }));
+    }
+
+  }, [mapFocus]);
+
   return (
     <form
       className={styles.formGrid}
       onSubmit={(e) => void handleSubmit(e)}
       aria-label="도시정보 마커 등록"
     >
+      <div className={`${styles.markerSearchRow} ${styles.full}`}>
+        <label htmlFor="marker-city-address-search">주소 또는 장소 검색</label>
+        <div className={styles.markerSearchInputRow}>
+          <input
+            id="marker-city-address-search"
+            type="search"
+            placeholder="주소 또는 장소 검색"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              searchAddress?.(searchQuery);
+            }}
+          />
+          <button
+            type="button"
+            className={`${styles.button} ${styles.buttonPrimary}`}
+            onClick={() => searchAddress?.(searchQuery)}
+          >
+            검색
+          </button>
+        </div>
+      </div>
+
+      <div className={`${styles.coordRow} ${styles.full}`}>
+        <div className={`${styles.field} ${styles.gridIdField}`}>
+          <label htmlFor="marker-city-grid-id">그리드 ID</label>
+          <input
+            id="marker-city-grid-id"
+            placeholder="000000"
+            value={form.grid_id}
+            readOnly
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="marker-city-lat">위도</label>
+          <input
+            id="marker-city-lat"
+            placeholder="37.5665"
+            value={form.lat}
+            onChange={(e) => {
+              setForm((p) => ({ ...p, lat: e.target.value }));
+              setMapFocus({
+                lat: Number(e.target.value),
+                lng: Number(form.lng),
+                description: "마커 위치",
+              });
+            }}
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="marker-city-lng">경도</label>
+          <input
+            id="marker-city-lng"
+            placeholder="126.9780"
+            value={form.lng}
+            onChange={(e) => {
+              setForm((p) => ({ ...p, lng: e.target.value }));
+              setMapFocus({
+                lat: Number(form.lat),
+                lng: Number(e.target.value),
+                description: "마커 위치",
+              });
+            }}
+          />
+        </div>
+      </div>
+
       <div className={`${styles.field} ${styles.full}`}>
         <label htmlFor="marker-city-type">유형</label>
         <select
@@ -191,35 +279,6 @@ export function CityEventMarkerForm() {
         inputId="marker-city-image"
         onFileChange={setImageFile}
       />
-
-      <div className={`${styles.coordRow} ${styles.full}`}>
-        <div className={styles.field}>
-          <label htmlFor="marker-city-lat">위도</label>
-          <input
-            id="marker-city-lat"
-            placeholder="37.5665"
-            value={form.lat}
-            onChange={(e) => setForm((p) => ({ ...p, lat: e.target.value }))}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="marker-city-lng">경도</label>
-          <input
-            id="marker-city-lng"
-            placeholder="126.9780"
-            value={form.lng}
-            onChange={(e) => setForm((p) => ({ ...p, lng: e.target.value }))}
-          />
-        </div>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={applyMapFocus}
-          disabled={!mapFocus}
-        >
-          지도에서 좌표 가져오기
-        </button>
-      </div>
 
       {localError && (
         <div className={`${styles.notice} ${styles.noticeError} ${styles.full}`}>

@@ -78,7 +78,7 @@ export type EventsListResult = {
 };
 
 export type CreateEventPayload = {
-  id?: string;
+  id?: number;
   type: string;
   title: string;
   description: string;
@@ -93,6 +93,7 @@ export type UpdateEventPayload = CreateEventPayload & { id: number };
 export type MapFocus = {
   lat: number;
   lng: number;
+  grid_id?: number;
   label?: string;
   id?: string;
   kind?: "report" | "feedback" | "event";
@@ -427,4 +428,14 @@ export async function restoreEvent(id: number) {
     method: "POST",
     body: JSON.stringify({ id }),
   });
+}
+
+/**
+ * 그리드 ID 조회
+ * @param lat 위도
+ * @param lng 경도
+ * @returns 그리드 ID
+ */
+export async function fetchGridId(lat: number, lng: number): Promise<number> {
+  return request<number>(`/admin/grid-id?lat=${lat}&lng=${lng}`);
 }
