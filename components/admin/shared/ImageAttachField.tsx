@@ -1,9 +1,11 @@
 // 담당: 피드백/관리자팀
-
+// 작성자: 최정봉
+// 내용: 이미지 첨부 필드
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import styles from "../admin.module.css";
+import { resizeImage } from "@/lib/utils/imageResize";
 
 type Props = {
   inputId: string;
@@ -32,26 +34,49 @@ export function ImageAttachField({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [existingUrl]);
 
+  /** 컴포넌트가 사라질 때 이미지 미리보기 URL 해제 */
+  useEffect(() => {
+    return () => {
+      if (localPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(localPreview);
+      }
+    };
+  }, [localPreview]);
+
   const displayUrl = localPreview || existingUrl || null;
 
-  function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) {
-      setLocalPreview((prev) => {
-        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-        return null;
-      });
-      onFileChange?.(null);
+  /** 이미지 파일 변경 이벤트 핸들러 */
+  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const originalFile = e.target.files?.[0] ?? null;
+
+    if (!originalFile) {
+      clearImage();
       return;
     }
-    const url = URL.createObjectURL(file);
-    setLocalPreview((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return url;
-    });
-    onFileChange?.(file);
+
+    if (!originalFile.type.startsWith("image/")) {
+      alert("이미지 파일만 첨부할 수 있습니다.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      const resizedFile = await resizeImage(originalFile, 800, 0.7);
+      const previewUrl = URL.createObjectURL(resizedFile);
+      setLocalPreview((prev) => {
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return previewUrl;
+      });
+      onFileChange?.(resizedFile);
+    } catch (error) {
+      console.error(error);
+      alert("이미지 처리에 실패했습니다.");
+      e.target.value = "";
+      onFileChange?.(null);
+    }
   }
 
+  /** 이미지 제거 핸들러 */
   function clearImage() {
     setLocalPreview((prev) => {
       if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);

@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import {
   createEvent,
+  createReport,
   deleteEvent,
   deleteFeedback,
   deleteReport,
@@ -21,6 +22,7 @@ import type {
   AdminSummary,
   AdminTab,
   CreateEventPayload,
+  CreateReportPayload,
   DatePreset,
   DeleteTarget,
   MapFocus,
@@ -154,6 +156,7 @@ type AdminState = {
   confirmRestore: () => Promise<void>;
   restoreReportById: (id: string | number) => Promise<void>;
   restoreEventById: (id: string | number) => Promise<void>;
+  submitReport: (payload: CreateReportPayload) => Promise<boolean>;
   submitCityEvent: (payload: CreateEventPayload) => Promise<void>;
   updateCityEvent: (payload: UpdateEventPayload) => Promise<boolean>;
 };
@@ -536,6 +539,27 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       await get().restoreReportById(restoreTarget.id);
     } else {
       await get().restoreEventById(restoreTarget.id);
+    }
+  },
+
+  submitReport: async (payload) => {
+    set({ loading: true, error: null });
+    try {
+      await createReport(payload);
+      set({
+        loading: false,
+        message: "제보가 등록되었습니다.",
+        tab: "reports",
+      });
+      await get().loadReports();
+      await get().loadSummary();
+      return true;
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "제보 등록에 실패했습니다.",
+      });
+      return false;
     }
   },
 
