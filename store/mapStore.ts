@@ -66,8 +66,8 @@ type MapState = {
   sidePanelOpen: boolean;
   setSidePanelOpen: (open: boolean) => void;
   /** 왼쪽 패널 탭 (레일 / 지도 클릭 공유) */
-  sidePanelTab: "grid" | "events";
-  setSidePanelTab: (tab: "grid" | "events") => void;
+  sidePanelTab: "grid" | "events" | "reports";
+  setSidePanelTab: (tab: "grid" | "events" | "reports") => void;
 
   setBounds: (bounds: MapBounds) => void;
   setGrids: (grids: GridItem[]) => void;
@@ -85,10 +85,13 @@ type MapState = {
   setCityEventsLoading: (loading: boolean) => void;
   setSelectedEventId: (id: number | null) => void;
   //reports
+  
   reports: ReportItem[];
   reportsLoading: boolean;
   setReports: (items: ReportItem[]) => void;
   setReportsLoading: (loading: boolean) => void;
+  selectedReportId: number | null;
+  setSelectedReportId: (id: number | null) => void;
   //map action
   moveTo: MapActions["moveTo"] | null;
   searchAddress: MapActions["searchAddress"] | null;
@@ -132,6 +135,10 @@ export const useMapStore = create<MapState>((set) => ({
   setSidePanelOpen: (sidePanelOpen) => set({ sidePanelOpen }),
   sidePanelTab: "events",
   setSidePanelTab: (sidePanelTab) => set({ sidePanelTab }),
+  selectedReportId: null,
+  setSelectedReportId: (selectedReportId) => set({ selectedReportId }),
+
+
 
   cityEvents: [],
   cityEventsLoading: false,

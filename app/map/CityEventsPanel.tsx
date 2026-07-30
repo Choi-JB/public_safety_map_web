@@ -8,7 +8,7 @@ import {
   useMapStore,
 } from "@/store/mapStore";
 import { get } from "@/lib/api/client";
-import type { CityEventItem, InfrastructureItem } from "@/lib/api/types";
+import type { CityEventItem, InfrastructureItem, ReportItem } from "@/lib/api/types";
 import styles from "./CityEventsPanel.module.css";
 
 
@@ -51,7 +51,7 @@ const handleStyle: CSSProperties = {
   boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
 };
 
-type PanelTab = "grid" | "events";
+type PanelTab = "grid" | "events" | "reports";
 
 /** 카드 공통 스타일 (격자 / 행사 동일) */
 const cardStyle: CSSProperties = {
@@ -162,6 +162,13 @@ export default function CityEventsPanel() {
     };
   }, [selectedGridId]);
 
+  // --- 제보 ---
+  const reports = useMapStore((s) => s.reports);
+  const reportsLoading = useMapStore((s) => s.reportsLoading);
+  const selectedReportId = useMapStore((s) => s.selectedReportId);
+  const setSelectedReportId = useMapStore((s) => s.setSelectedReportId);
+  const selectedReportCardRef = useRef<HTMLButtonElement | null>(null);
+
   // --- 행사 ---
   const events = useMapStore((s) => s.cityEvents);
   const loading = useMapStore((s) => s.cityEventsLoading);
@@ -177,6 +184,12 @@ export default function CityEventsPanel() {
 
   // 선택한 행사 카드로 스크롤
   useEffect(() => {
+    if (sidePanelTab === "reports" && selectedReportId != null && sidePanelOpen) {
+      selectedReportCardRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
     if (sidePanelTab !== "events" || selectedEventId == null || !sidePanelOpen) {
       return;
     }
@@ -184,7 +197,7 @@ export default function CityEventsPanel() {
       behavior: "smooth",
       block: "nearest",
     });
-  }, [sidePanelTab, selectedEventId, sidePanelOpen, events]);
+  }, [sidePanelTab, selectedEventId, sidePanelOpen, events, reports]);
 
   /** 레일 클릭: 다른 메뉴면 전환·열기, 같은 메뉴면 접기/펼치기 */
   const onRailClick = (next: PanelTab) => {
@@ -201,6 +214,13 @@ export default function CityEventsPanel() {
     setSidePanelTab("events");
     setSidePanelOpen(true);
     if (e.lat != null && e.lng != null) moveTo?.(e.lat, e.lng, 4);
+  };
+
+  const selectReport = (r: ReportItem) => {
+    setSelectedReportId(r.id);
+    setSidePanelTab("reports");
+    setSidePanelOpen(true);
+    if (r.lat != null && r.lng != null) moveTo?.(r.lat, r.lng, 4);
   };
 
   const withCoord = (i: InfrastructureItem) => i.lat != null && i.lng != null;
@@ -284,6 +304,12 @@ export default function CityEventsPanel() {
           icon="◎"
           onClick={() => onRailClick("events")}
         />
+        <RailButton
+          active={detailOpen && sidePanelTab === "reports"}
+          label="제보"
+          icon="!"
+          onClick={() => onRailClick("reports")}
+        />
       </nav>
 
       {/* 상세 패널: 레일 오른쪽, 슬라이드 */}
@@ -312,7 +338,11 @@ export default function CityEventsPanel() {
                 fontWeight: 700,
               }}
             >
-              {sidePanelTab === "grid" ? "격자 정보" : "행사 정보"}
+              {sidePanelTab === "grid"
+                ? "격자 정보"
+                : sidePanelTab === "events"
+                  ? "행사 정보"
+                  : "제보 정보"}
             </div>
 
             <div
@@ -549,10 +579,49 @@ export default function CityEventsPanel() {
                 </div>
               </>
             )}
-          </div>
-          </div>
+        {/* ========== 제보 ========== */}
+            {sidePanelTab === "reports" && (
+              <>
+                {reportsLoading && (
+                  <div style={{ fontSize: 12, color: "#666" }}>제보 불러오는 중...</div>
+                )}
+                {!reportsLoading && reports.length === 0 && (
+                  <div style={{ fontSize: 12, color: "#666" }}>근처 제보가 없습니다.</div>
+                )}
+                {reports.map((r) => {
+                  const selected = r.id === selectedReportId;
+                  return (
+                    <button
+                      key={r.id}
+                      ref={selected ? selectedReportCardRef : undefined}
+                      type="button"
+                      onClick={() => selectReport(r)}
+                      style={{
+                        ...cardStyle,
+                        cursor: "pointer",
+                        background: selected ? "#fef2f2" : "#fff",
+                        border: selected ? "2px solid #dc2626" : "1px solid #e5e7eb",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>
+                        {r.type ?? "제보"}
+                      </div>
+                      {r.description && (
+                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                          {r.description}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12, color: "#374151", marginTop: 6 }}>
+                        {r.user_nickname ?? "-"} {formatDateTime(r.created_at)}~{formatDateTime(r.expire_at)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            )}
         </div>
-
+        </div>
+      </div>
         {/* 여닫기 핸들 — 상세 오른쪽 가장자리 */}
         <button
           type="button"
