@@ -74,6 +74,99 @@ function ClockIcon() {
   );
 }
 
+type DateInputProps = {
+  id: string;
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (date: string) => void;
+};
+
+/** 달력 버튼과 YYYY-MM-DD 직접 입력을 함께 지원하는 날짜 입력창 */
+export function DateInput({
+  id,
+  label,
+  value,
+  disabled = false,
+  onChange,
+}: DateInputProps) {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const [dateText, setDateText] = useState(value);
+
+  useEffect(() => {
+    setDateText(value);
+  }, [value]);
+
+  function openPicker() {
+    if (!pickerRef.current || disabled) return;
+    try {
+      pickerRef.current.showPicker();
+    } catch {
+      pickerRef.current.click();
+    }
+  }
+
+  function handleTextChange(e: ChangeEvent<HTMLInputElement>) {
+    const next = formatDateTyping(e.target.value);
+    setDateText(next);
+    if (isValidYmd(next)) onChange(next);
+  }
+
+  function handleBlur() {
+    const next = formatDateTyping(dateText);
+    setDateText(next);
+    if (isValidYmd(next)) {
+      onChange(next);
+    } else if (value) {
+      setDateText(value);
+    }
+  }
+
+  return (
+    <div className={`${styles.field} ${styles.dateInputField}`}>
+      <label htmlFor={`${id}-date-text`}>{label}</label>
+      <div
+        className={`${styles.iconInput} ${disabled ? styles.iconInputDisabled : ""}`}
+      >
+        <button
+          type="button"
+          className={styles.iconInputBtn}
+          title="날짜 선택"
+          aria-label={`${label} 날짜 선택`}
+          disabled={disabled}
+          onClick={openPicker}
+        >
+          <CalendarIcon />
+        </button>
+        <input
+          ref={pickerRef}
+          id={`${id}-date-picker`}
+          type="date"
+          className={styles.hiddenPicker}
+          value={isValidYmd(value) ? value : ""}
+          disabled={disabled}
+          onChange={(e) => {
+            setDateText(e.target.value);
+            onChange(e.target.value);
+          }}
+          tabIndex={-1}
+        />
+        <input
+          id={`${id}-date-text`}
+          type="text"
+          inputMode="numeric"
+          placeholder="YYYY-MM-DD"
+          className={styles.iconInputField}
+          value={dateText}
+          readOnly={disabled}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+        />
+      </div>
+    </div>
+  );
+}
+
 type ScheduleRowProps = {
   idPrefix: string;
   label: string;

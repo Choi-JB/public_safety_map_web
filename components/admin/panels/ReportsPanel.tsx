@@ -10,6 +10,7 @@ import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
+import { DateInput } from "../shared/ScheduleRow";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -54,34 +55,23 @@ export function ReportsPanel() {
               value={filters.date_preset}
               onChange={applyReportDatePreset}
             />
-            <div className={styles.field}>
-              <label htmlFor="report-from">시작일</label>
-              <input
-                id="report-from"
-                type="date"
-                value={filters.date_from}
-                onChange={(e) =>
-                  setReportFilters({
-                    date_from: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="report-to">종료일</label>
-              <input
-                id="report-to"
-                type="date"
-                value={filters.date_to}
-                onChange={(e) =>
-                  setReportFilters({
-                    date_to: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
+            <DateInput
+              id="report-from"
+              label="등록일"
+              value={filters.date_from}
+              onChange={(date) =>
+                setReportFilters({ date_from: date, date_preset: "" })
+              }
+            />
+            
+            <DateInput
+              id="report-to"
+              label=""
+              value={filters.date_to}
+              onChange={(date) =>
+                setReportFilters({ date_to: date, date_preset: "" })
+              }
+            />
           </div>
 
           <div className={styles.filterRow}>
@@ -139,7 +129,7 @@ export function ReportsPanel() {
                 <th>작성자</th>
                 <th>설명</th>
                 <th>사진</th>
-                <th>작성일</th>
+                <th>등록일</th>
                 <th>작업</th>
               </tr>
             </thead>

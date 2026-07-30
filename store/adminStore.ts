@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import {
   createEvent,
+  createReport,
   deleteEvent,
   deleteFeedback,
   deleteReport,
@@ -21,6 +22,7 @@ import type {
   AdminSummary,
   AdminTab,
   CreateEventPayload,
+  CreateReportPayload,
   DatePreset,
   DeleteTarget,
   MapFocus,
@@ -73,6 +75,22 @@ export function getDateRangeFromPreset(preset: Exclude<DatePreset, "">) {
   if (preset === "6m") from.setMonth(from.getMonth() - 6);
   if (preset === "3m") from.setMonth(from.getMonth() - 3);
   if (preset === "1m") from.setMonth(from.getMonth() - 1);
+  return {
+    date_from: toDateInputValue(from),
+    date_to: toDateInputValue(to),
+  };
+}
+
+/** 오늘부터 선택한 기간 이후까지의 도시정보 조회 범위 */
+export function getFutureDateRangeFromPreset(
+  preset: Exclude<DatePreset, "">,
+) {
+  const from = new Date();
+  const to = new Date();
+  if (preset === "1y") to.setFullYear(to.getFullYear() + 1);
+  if (preset === "6m") to.setMonth(to.getMonth() + 6);
+  if (preset === "3m") to.setMonth(to.getMonth() + 3);
+  if (preset === "1m") to.setMonth(to.getMonth() + 1);
   return {
     date_from: toDateInputValue(from),
     date_to: toDateInputValue(to),
@@ -138,11 +156,13 @@ type AdminState = {
   confirmRestore: () => Promise<void>;
   restoreReportById: (id: string | number) => Promise<void>;
   restoreEventById: (id: string | number) => Promise<void>;
+  submitReport: (payload: CreateReportPayload) => Promise<boolean>;
   submitCityEvent: (payload: CreateEventPayload) => Promise<void>;
   updateCityEvent: (payload: UpdateEventPayload) => Promise<boolean>;
 };
 
 const initialDateRange = getDateRangeFromPreset("1m");
+const initialEventDateRange = getFutureDateRangeFromPreset("1m");
 
 const defaultReportFilters: ReportFilters = {
   type: "",
@@ -169,8 +189,8 @@ const defaultEventFilters: EventFilters = {
   type: "",
   filter: "active",
   date_preset: "1m",
-  date_from: initialDateRange.date_from,
-  date_to: initialDateRange.date_to,
+  date_from: initialEventDateRange.date_from,
+  date_to: initialEventDateRange.date_to,
   page: 1,
   limit: 10,
 };
@@ -249,7 +269,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }));
       return;
     }
-    const range = getDateRangeFromPreset(preset);
+    const range = getFutureDateRangeFromPreset(preset);
     set((s) => ({
       eventFilters: {
         ...s.eventFilters,
@@ -297,7 +317,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     });
   },
   resetEventFilters: () => {
-    const range = getDateRangeFromPreset("1m");
+    const range = getFutureDateRangeFromPreset("1m");
     set({
       eventFilters: {
         type: "",
@@ -519,6 +539,27 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       await get().restoreReportById(restoreTarget.id);
     } else {
       await get().restoreEventById(restoreTarget.id);
+    }
+  },
+
+  submitReport: async (payload) => {
+    set({ loading: true, error: null });
+    try {
+      await createReport(payload);
+      set({
+        loading: false,
+        message: "제보가 등록되었습니다.",
+        tab: "reports",
+      });
+      await get().loadReports();
+      await get().loadSummary();
+      return true;
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "제보 등록에 실패했습니다.",
+      });
+      return false;
     }
   },
 

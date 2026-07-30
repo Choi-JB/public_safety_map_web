@@ -9,6 +9,7 @@ import { ImageAttachField } from "../../shared/ImageAttachField";
 import { isValidYmd, ScheduleRow } from "../../shared/ScheduleRow";
 import { useAuthStore } from "@/store/authStore";
 import { useMapStore } from "@/store/mapStore";
+import { uploadImage } from "@/lib/api/upload";
 
 const CITY_TYPE_OPTIONS = ["행사", "인파 밀집", "교통 통제", "기타"] as const;
 const DEFAULT_START_TIME = "09:00";
@@ -108,8 +109,13 @@ export function CityEventMarkerForm() {
       return;
     }
 
-    // 이미지 첨부는 UI만 지원 — create-event API에 파일 필드 없음
-    void imageFile;
+    // 이미지 파일이 있는 경우 서버에 먼저 보내고 url을 받아옴
+    let imgUrl: string | null = null;
+    if (imageFile) {
+      const uploaded = await uploadImage(imageFile);
+      imgUrl = uploaded.img_url;
+    }
+    console.log('imgUrl', imgUrl);
 
     await submitCityEvent({
       id: user?.id ? Number(user.id) : undefined,
@@ -120,6 +126,7 @@ export function CityEventMarkerForm() {
       lng,
       start_at: composeIso(form.startDate, form.startTime, DEFAULT_START_TIME),
       end_at: composeIso(form.endDate, form.endTime, DEFAULT_END_TIME),
+      img_url: imgUrl,
     });
 
     // 성공 시 store가 message/탭 전환 처리. 에러면 store.error에 남음.

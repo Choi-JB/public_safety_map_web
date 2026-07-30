@@ -86,6 +86,17 @@ export type CreateEventPayload = {
   lng: number;
   start_at: string;
   end_at: string;
+  img_url?: string | null;
+};
+
+export type CreateReportPayload = {
+  id?: number;
+  grid_id: number;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+  img_url?: string | null;
 };
 
 export type UpdateEventPayload = CreateEventPayload & { id: number };
@@ -385,7 +396,16 @@ export async function createEvent(payload: CreateEventPayload) {
     start_at: payload.start_at,
     end_at: payload.end_at,
   });
+
   return request<undefined>(`/admin/create-event${qs}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** 제보 마커 생성 */
+export async function createReport(payload: CreateReportPayload) {
+  return request<undefined>("/admin/create-report", {
     method: "POST",
     body: JSON.stringify(payload),
   });

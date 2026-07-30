@@ -11,6 +11,16 @@ export const DATE_PRESETS: { value: Exclude<DatePreset, "">; label: string }[] =
     { value: "1m", label: "1개월" },
   ];
 
+export const FUTURE_DATE_PRESETS: {
+  value: Exclude<DatePreset, "">;
+  label: string;
+}[] = [
+  { value: "1m", label: "1개월 후" },
+  { value: "3m", label: "3개월 후" },
+  { value: "6m", label: "6개월 후" },
+  { value: "1y", label: "1년 후" },
+];
+
 const ACTIVE_OPTIONS: { value: ActiveFilter; label: string }[] = [
   { value: "active", label: "활성" },
   { value: "inactive", label: "비활성" },
@@ -21,18 +31,20 @@ type DatePresetChecksProps = {
   value: DatePreset;
   onChange: (preset: DatePreset) => void;
   idPrefix: string;
+  presets?: { value: Exclude<DatePreset, "">; label: string }[];
 };
 
 export function DatePresetChecks({
   value,
   onChange,
   idPrefix,
+  presets = DATE_PRESETS,
 }: DatePresetChecksProps) {
   return (
     <div className={styles.field}>
       <span className={styles.fieldLabel}>기간 프리셋</span>
       <div className={styles.checkGroup} role="group" aria-label="기간 프리셋">
-        {DATE_PRESETS.map((preset) => {
+        {presets.map((preset) => {
           const id = `${idPrefix}-preset-${preset.value}`;
           return (
             <label key={preset.value} className={styles.checkItem} htmlFor={id}>

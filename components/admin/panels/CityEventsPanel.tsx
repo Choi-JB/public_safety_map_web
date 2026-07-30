@@ -4,12 +4,17 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
-import { formatCreatedAt } from "../shared/formatDate";
+import {
+  ActiveFilterChecks,
+  DatePresetChecks,
+  FUTURE_DATE_PRESETS,
+} from "../shared/FilterChecks";
+import { formatCreatedAt, formatDateRange } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
+import { DateInput } from "../shared/ScheduleRow";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -46,35 +51,24 @@ export function CityEventsPanel() {
               idPrefix="event"
               value={filters.date_preset}
               onChange={applyEventDatePreset}
+              presets={FUTURE_DATE_PRESETS}
             />
-            <div className={styles.field}>
-              <label htmlFor="event-from">시작일</label>
-              <input
-                id="event-from"
-                type="date"
-                value={filters.date_from}
-                onChange={(e) =>
-                  setEventFilters({
-                    date_from: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="event-to">종료일</label>
-              <input
-                id="event-to"
-                type="date"
-                value={filters.date_to}
-                onChange={(e) =>
-                  setEventFilters({
-                    date_to: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
+            <DateInput
+              id="event-from"
+              label="행사 시작 날짜"
+              value={filters.date_from}
+              onChange={(date) =>
+                setEventFilters({ date_from: date, date_preset: "" })
+              }
+            />
+            <DateInput
+              id="event-to"
+              label=""
+              value={filters.date_to}
+              onChange={(date) =>
+                setEventFilters({ date_to: date, date_preset: "" })
+              }
+            />
           </div>
 
           <div className={styles.filterRow}>
@@ -131,7 +125,7 @@ export function CityEventsPanel() {
                 <th>유형</th>
                 <th>제목</th>
                 <th>사진</th>
-                <th>등록일</th>
+                <th>행사 날짜</th>
                 <th>작업</th>
               </tr>
             </thead>
@@ -197,7 +191,7 @@ export function CityEventsPanel() {
                         )}
                       </td>
                       <td className={styles.dateCell}>
-                        {formatCreatedAt(event.created_at)}
+                        {formatDateRange(event.start_at, event.end_at)}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {active ? (

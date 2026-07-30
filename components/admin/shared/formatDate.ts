@@ -36,3 +36,34 @@ export function formatCreatedAt(value: string) {
     return value;
   }
 }
+
+/** 날짜 범위 포맷 2026.07.30(목) ~ 2026.08.05(토) 형식으로 반환 */
+/** 년도가 같으면 2026.07.30(목) ~ 08.05(토) 형식으로 반환 */
+export function formatDateRange(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const startYear = startDate.getFullYear();
+  const startMonth = pad(startDate.getMonth() + 1);
+  const startDay = pad(startDate.getDate());
+  const endYear = endDate.getFullYear();
+  const endMonth = pad(endDate.getMonth() + 1);
+  const endDay = pad(endDate.getDate());
+  const startDayOfWeek = getDayOfWeek(startDate);
+  //const endDayOfWeek = getDayOfWeek(endDate);
+  if (startYear === endYear && startMonth === endMonth && startDay === endDay) {
+    return `${startYear}.${startMonth}.${startDay}(${startDayOfWeek})`;
+  }
+  // if (startYear === endYear && startMonth === endMonth) {
+  //   return `${startYear}.${startMonth}.${startDay} ~ ${endMonth}.${endDay}`;
+  // }
+  if (startYear === endYear) {
+    return `${startYear}.${startMonth}.${startDay} ~ ${endMonth}.${endDay}`;
+  }
+  return `${startYear}.${startMonth}.${startDay} ~ ${endYear}.${endMonth}.${endDay}`;
+}
+
+/** 날짜를 요일로 반환 */
+export function getDayOfWeek(date: Date) {
+  const days = ["일", "월", "화", "수", "목", "금", "토"];
+  return days[date.getDay()];
+}

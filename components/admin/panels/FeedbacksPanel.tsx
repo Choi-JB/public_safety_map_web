@@ -10,6 +10,7 @@ import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { SafetyBadge } from "../shared/SafetyBadge";
+import { DateInput } from "../shared/ScheduleRow";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -51,34 +52,22 @@ export function FeedbacksPanel() {
               value={filters.date_preset}
               onChange={applyFeedbackDatePreset}
             />
-            <div className={styles.field}>
-              <label htmlFor="fb-from">시작일</label>
-              <input
-                id="fb-from"
-                type="date"
-                value={filters.date_from}
-                onChange={(e) =>
-                  setFeedbackFilters({
-                    date_from: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="fb-to">종료일</label>
-              <input
-                id="fb-to"
-                type="date"
-                value={filters.date_to}
-                onChange={(e) =>
-                  setFeedbackFilters({
-                    date_to: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
+            <DateInput
+              id="fb-from"
+              label="등록일"
+              value={filters.date_from}
+              onChange={(date) =>
+                setFeedbackFilters({ date_from: date, date_preset: "" })
+              }
+            />
+            <DateInput
+              id="fb-to"
+              label=""
+              value={filters.date_to}
+              onChange={(date) =>
+                setFeedbackFilters({ date_to: date, date_preset: "" })
+              }
+            />
           </div>
 
           <div className={styles.filterRow}>
@@ -150,7 +139,7 @@ export function FeedbacksPanel() {
                 <th>작성자</th>
                 <th>한줄평</th>
                 <th>사진</th>
-                <th>작성일</th>
+                <th>등록일</th>
                 <th>삭제</th>
               </tr>
             </thead>
