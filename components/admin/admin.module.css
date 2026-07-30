@@ -685,6 +685,12 @@
   color: var(--admin-text);
 }
 
+.dateInputField {
+  width: calc(36px + 10ch + 20px);
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
 .iconInput {
   display: flex;
   align-items: stretch;

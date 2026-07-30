@@ -79,6 +79,22 @@ export function getDateRangeFromPreset(preset: Exclude<DatePreset, "">) {
   };
 }
 
+/** 오늘부터 선택한 기간 이후까지의 도시정보 조회 범위 */
+export function getFutureDateRangeFromPreset(
+  preset: Exclude<DatePreset, "">,
+) {
+  const from = new Date();
+  const to = new Date();
+  if (preset === "1y") to.setFullYear(to.getFullYear() + 1);
+  if (preset === "6m") to.setMonth(to.getMonth() + 6);
+  if (preset === "3m") to.setMonth(to.getMonth() + 3);
+  if (preset === "1m") to.setMonth(to.getMonth() + 1);
+  return {
+    date_from: toDateInputValue(from),
+    date_to: toDateInputValue(to),
+  };
+}
+
 /** "전체"는 옵션 UI에서 맨 위, "기타"는 목록 맨 아래 */
 function sortTypesWithEtcLast(types: string[]) {
   const unique = Array.from(new Set(types.filter(Boolean)));
@@ -143,6 +159,7 @@ type AdminState = {
 };
 
 const initialDateRange = getDateRangeFromPreset("1m");
+const initialEventDateRange = getFutureDateRangeFromPreset("1m");
 
 const defaultReportFilters: ReportFilters = {
   type: "",
@@ -169,8 +186,8 @@ const defaultEventFilters: EventFilters = {
   type: "",
   filter: "active",
   date_preset: "1m",
-  date_from: initialDateRange.date_from,
-  date_to: initialDateRange.date_to,
+  date_from: initialEventDateRange.date_from,
+  date_to: initialEventDateRange.date_to,
   page: 1,
   limit: 10,
 };
@@ -249,7 +266,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }));
       return;
     }
-    const range = getDateRangeFromPreset(preset);
+    const range = getFutureDateRangeFromPreset(preset);
     set((s) => ({
       eventFilters: {
         ...s.eventFilters,
@@ -297,7 +314,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     });
   },
   resetEventFilters: () => {
-    const range = getDateRangeFromPreset("1m");
+    const range = getFutureDateRangeFromPreset("1m");
     set({
       eventFilters: {
         type: "",
