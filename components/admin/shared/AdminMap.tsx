@@ -74,12 +74,12 @@ export default function AdminMap() {
             myLocationMarkerRef.current.setPosition(position);
             return;
         }
-        myLocationMarkerRef.current = new kakao.maps.Marker({
-            map,
-            position,
-            title: "내 위치",
-            image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
-        });
+        // myLocationMarkerRef.current = new kakao.maps.Marker({
+        //     map,
+        //     position,
+        //     title: "내 위치",
+        //     image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
+        // });
     };
 
     //admin

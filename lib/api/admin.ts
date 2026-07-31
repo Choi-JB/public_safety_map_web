@@ -36,7 +36,7 @@ export type AdminReport = {
   user?: { nickname: string } | null;
 };
 
-export type DatePreset = "" | "1y" | "6m" | "3m" | "1m";
+export type DatePreset = "" | "today" | "1y" | "6m" | "3m" | "1m";
 
 export type ReportsListResult = {
   reports: AdminReport[];

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import {
   ActiveFilterChecks,
@@ -17,6 +17,27 @@ import { RestoreIcon } from "../shared/RestoreIcon";
 import { DateInput } from "../shared/ScheduleRow";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
+
+type EventStatus = "scheduled" | "ongoing" | "ended";
+
+function getEventStatus(
+  startAt: string,
+  endAt: string,
+  now: number,
+): EventStatus | null {
+  const start = new Date(startAt).getTime();
+  const end = new Date(endAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (now < start) return "scheduled";
+  if (now >= end) return "ended";
+  return "ongoing";
+}
+
+const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
+  scheduled: "예정",
+  ongoing: "진행",
+  ended: "종료",
+};
 
 export function CityEventsPanel() {
   const events = useAdminStore((s) => s.events);
@@ -33,6 +54,7 @@ export function CityEventsPanel() {
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     void loadEvents();
@@ -40,6 +62,11 @@ export function CityEventsPanel() {
       setMapFocus(null);
     }
   }, [loadEvents, filters.page, filters.filter]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div>
@@ -139,6 +166,11 @@ export function CityEventsPanel() {
               ) : (
                 events.map((event) => {
                   const active = event.is_active !== "N";
+                  const status = getEventStatus(
+                    event.start_at,
+                    event.end_at,
+                    now,
+                  );
                   const focused =
                     mapFocus?.kind === "event" && mapFocus.id === event.id;
                   const rowClass = [
@@ -170,7 +202,24 @@ export function CityEventsPanel() {
                         />
                       </td>
                       <td>{event.type}</td>
-                      <td>{event.title}</td>
+                      <td>
+                        <div className={styles.eventTitleCell}>
+                          {status && (
+                            <span
+                              className={`${styles.badge} ${
+                                status === "scheduled"
+                                  ? styles.eventStatusScheduled
+                                  : status === "ongoing"
+                                    ? styles.eventStatusOngoing
+                                    : styles.eventStatusEnded
+                              }`}
+                            >
+                              {EVENT_STATUS_LABEL[status]}
+                            </span>
+                          )}
+                          <span>{event.title}</span>
+                        </div>
+                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {event.img_url ? (
                           <button
