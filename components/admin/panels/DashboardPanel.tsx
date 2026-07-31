@@ -27,7 +27,7 @@ export function DashboardPanel() {
       today: summary?.feedbacks_today,
     },
     {
-      label: "등록된 도시정보",
+      label: "진행 중이거나 예정된 도시정보",
       value: summary?.active_city_events ?? "-",
       today: undefined,
     },

@@ -7,16 +7,17 @@ import { useAdminStore } from "@/store/adminStore";
 import {
   ActiveFilterChecks,
   DatePresetChecks,
-  FUTURE_DATE_PRESETS,
+  EVENT_DATE_PRESETS,
 } from "../shared/FilterChecks";
-import { formatCreatedAt, formatDateRange } from "../shared/formatDate";
+import { formatDateRange } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
-import { DateInput } from "../shared/ScheduleRow";
+import { SearchQueryField } from "../shared/SearchQueryField";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
+import { getDateRangeFromYearMonth } from "@/store/adminStore";
 
 type EventStatus = "scheduled" | "ongoing" | "ended";
 
@@ -39,6 +40,20 @@ const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
   ended: "종료",
 };
 
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+function yearOptions(centerYear: number) {
+  const years: number[] = [];
+  for (let y = centerYear - 5; y <= centerYear + 5; y += 1) years.push(y);
+  return years;
+}
+
+function parseYearMonth(value: string) {
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]) };
+}
+
 export function CityEventsPanel() {
   const events = useAdminStore((s) => s.events);
   const eventTypes = useAdminStore((s) => s.eventTypes);
@@ -55,6 +70,42 @@ export function CityEventsPanel() {
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
   const [now, setNow] = useState(() => Date.now());
+
+  const currentYear = new Date().getFullYear();
+  const fromYm = parseYearMonth(filters.date_from) ?? {
+    year: currentYear,
+    month: new Date().getMonth() + 1,
+  };
+  const toYm = parseYearMonth(filters.date_to) ?? {
+    year: currentYear,
+    month: new Date().getMonth() + 1,
+  };
+
+  function applyYearMonthRange(
+    nextFrom: { year: number; month: number },
+    nextTo: { year: number; month: number },
+  ) {
+    let from = nextFrom;
+    let to = nextTo;
+    const fromKey = from.year * 12 + from.month;
+    const toKey = to.year * 12 + to.month;
+    if (fromKey > toKey) {
+      // 시작이 종료보다 뒤면 종료를 시작에 맞춤
+      to = { ...from };
+    }
+    const range = getDateRangeFromYearMonth(
+      from.year,
+      from.month,
+      to.year,
+      to.month,
+    );
+    setEventFilters({
+      date_preset: "",
+      date_from: range.date_from,
+      date_to: range.date_to,
+      page: 1,
+    });
+  }
 
   useEffect(() => {
     void loadEvents();
@@ -78,24 +129,82 @@ export function CityEventsPanel() {
               idPrefix="event"
               value={filters.date_preset}
               onChange={applyEventDatePreset}
-              presets={FUTURE_DATE_PRESETS}
+              presets={EVENT_DATE_PRESETS}
             />
-            <DateInput
-              id="event-from"
-              label="기간"
-              value={filters.date_from}
-              onChange={(date) =>
-                setEventFilters({ date_from: date, date_preset: "" })
-              }
-            />
-            <DateInput
-              id="event-to"
-              label=""
-              value={filters.date_to}
-              onChange={(date) =>
-                setEventFilters({ date_to: date, date_preset: "" })
-              }
-            />
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>기간 (년/월)</span>
+              <div className={styles.yearMonthRange}>
+                <select
+                  className={styles.yearSelect}
+                  aria-label="시작 연도"
+                  value={fromYm.year}
+                  onChange={(e) =>
+                    applyYearMonthRange(
+                      { year: Number(e.target.value), month: fromYm.month },
+                      toYm,
+                    )
+                  }
+                >
+                  {yearOptions(currentYear).map((year) => (
+                    <option key={`from-y-${year}`} value={year}>
+                      {year}년
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.monthSelect}
+                  aria-label="시작 월"
+                  value={fromYm.month}
+                  onChange={(e) =>
+                    applyYearMonthRange(
+                      { year: fromYm.year, month: Number(e.target.value) },
+                      toYm,
+                    )
+                  }
+                >
+                  {MONTH_OPTIONS.map((month) => (
+                    <option key={`from-m-${month}`} value={month}>
+                      {month}월
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.yearMonthSep}>~</span>
+                <select
+                  className={styles.yearSelect}
+                  aria-label="종료 연도"
+                  value={toYm.year}
+                  onChange={(e) =>
+                    applyYearMonthRange(fromYm, {
+                      year: Number(e.target.value),
+                      month: toYm.month,
+                    })
+                  }
+                >
+                  {yearOptions(currentYear).map((year) => (
+                    <option key={`to-y-${year}`} value={year}>
+                      {year}년
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.monthSelect}
+                  aria-label="종료 월"
+                  value={toYm.month}
+                  onChange={(e) =>
+                    applyYearMonthRange(fromYm, {
+                      year: toYm.year,
+                      month: Number(e.target.value),
+                    })
+                  }
+                >
+                  {MONTH_OPTIONS.map((month) => (
+                    <option key={`to-m-${month}`} value={month}>
+                      {month}월
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className={styles.filterRow}>
@@ -114,10 +223,39 @@ export function CityEventsPanel() {
                 ))}
               </select>
             </div>
+            <div className={styles.field}>
+              <label htmlFor="event-status">상태</label>
+              <select
+                id="event-status"
+                value={filters.status}
+                onChange={(e) =>
+                  setEventFilters({
+                    status: e.target.value as typeof filters.status,
+                    page: 1,
+                  })
+                }
+              >
+                <option value="">전체</option>
+                <option value="scheduled">예정</option>
+                <option value="ongoing">진행</option>
+                <option value="ended">종료</option>
+              </select>
+            </div>
             <ActiveFilterChecks
               idPrefix="event"
               value={filters.filter}
               onChange={(filter) => setEventFilters({ filter, page: 1 })}
+            />
+            <SearchQueryField
+              idPrefix="event"
+              mode="keyword"
+              query={filters.keyword}
+              showModeSelect={false}
+              onQueryChange={(keyword) => setEventFilters({ keyword })}
+              onSubmit={() => {
+                setEventFilters({ page: 1 });
+                void loadEvents();
+              }}
             />
             <button
               type="button"

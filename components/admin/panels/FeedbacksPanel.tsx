@@ -5,12 +5,14 @@
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
+import { AuthorNicknameMenu } from "../shared/AuthorNicknameMenu";
 import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { SafetyBadge } from "../shared/SafetyBadge";
 import { DateInput } from "../shared/ScheduleRow";
+import { SearchQueryField } from "../shared/SearchQueryField";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -93,18 +95,21 @@ export function FeedbacksPanel() {
               value={filters.filter}
               onChange={(filter) => setFeedbackFilters({ filter, page: 1 })}
             />
-            <div className={styles.field}>
-              <label htmlFor="fb-keyword">검색어</label>
-              <input
-                id="fb-keyword"
-                type="text"
-                value={filters.keyword}
-                placeholder="한줄평, 작성자"
-                onChange={(e) =>
-                  setFeedbackFilters({ keyword: e.target.value })
-                }
-              />
-            </div>
+            <SearchQueryField
+              idPrefix="fb"
+              mode={filters.search_mode}
+              query={filters.search_query}
+              onModeChange={(search_mode) =>
+                setFeedbackFilters({ search_mode })
+              }
+              onQueryChange={(search_query) =>
+                setFeedbackFilters({ search_query })
+              }
+              onSubmit={() => {
+                setFeedbackFilters({ page: 1 });
+                void loadFeedbacks();
+              }}
+            />
             <button
               type="button"
               className={`${styles.button} ${styles.buttonPrimary}`}
@@ -182,7 +187,19 @@ export function FeedbacksPanel() {
                       <td>
                         <SafetyBadge feeling={item.safety_feeling} />
                       </td>
-                      <td>{authorLabel(item)}</td>
+                      <td>
+                        <AuthorNicknameMenu
+                          nickname={authorLabel(item)}
+                          onSearchPosts={(nickname) => {
+                            setFeedbackFilters({
+                              search_mode: "user",
+                              search_query: nickname,
+                              page: 1,
+                            });
+                            void loadFeedbacks();
+                          }}
+                        />
+                      </td>
                       <td>{item.comment || "-"}</td>
                       <td>
                         {item.img_url ? (

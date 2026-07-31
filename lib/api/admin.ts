@@ -36,7 +36,16 @@ export type AdminReport = {
   user?: { nickname: string } | null;
 };
 
-export type DatePreset = "" | "today" | "1y" | "6m" | "3m" | "1m";
+export type DatePreset =
+  | ""
+  | "today"
+  | "1y"
+  | "6m"
+  | "3m"
+  | "1m"
+  | "this_week"
+  | "this_month"
+  | "this_year";
 
 export type ReportsListResult = {
   reports: AdminReport[];
@@ -120,6 +129,8 @@ export type RestoreTarget =
   | { kind: "report"; id: string; label: string }
   | { kind: "event"; id: string; label: string };
 
+export type EventScheduleStatus = "scheduled" | "ongoing" | "ended";
+
 export type ListQuery = {
   page: number;
   limit: number;
@@ -127,6 +138,9 @@ export type ListQuery = {
   date_from?: string;
   date_to?: string;
   date_range?: number;
+  nickname?: string;
+  keyword?: string;
+  status?: EventScheduleStatus | "";
 };
 
 export const REPORT_TYPES = [
@@ -250,6 +264,8 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    nickname: query.nickname,
+    keyword: query.keyword,
   });
 
   /**
@@ -319,6 +335,8 @@ export async function fetchFeedbacks(query: ListQuery) {
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    nickname: query.nickname,
+    keyword: query.keyword,
   });
   return request<AdminFeedback[]>(`/admin/feedbacks${qs}`);
 }
@@ -348,6 +366,8 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    keyword: query.keyword,
+    status: query.status || undefined,
   });
 
   /**

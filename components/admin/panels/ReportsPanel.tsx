@@ -4,17 +4,15 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import {
-  ActiveFilterChecks,
-  DatePresetChecks,
-  REPORT_DATE_PRESETS,
-} from "../shared/FilterChecks";
+import { ActiveFilterChecks, DatePresetChecks, REPORT_DATE_PRESETS } from "../shared/FilterChecks";
+import { AuthorNicknameMenu } from "../shared/AuthorNicknameMenu";
 import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
 import { DateInput } from "../shared/ScheduleRow";
+import { SearchQueryField } from "../shared/SearchQueryField";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -100,6 +98,19 @@ export function ReportsPanel() {
               value={filters.filter}
               onChange={(filter) => setReportFilters({ filter, page: 1 })}
             />
+            <SearchQueryField
+              idPrefix="report"
+              mode={filters.search_mode}
+              query={filters.search_query}
+              onModeChange={(search_mode) => setReportFilters({ search_mode })}
+              onQueryChange={(search_query) =>
+                setReportFilters({ search_query })
+              }
+              onSubmit={() => {
+                setReportFilters({ page: 1 });
+                void loadReports();
+              }}
+            />
             <button
               type="button"
               className={`${styles.button} ${styles.buttonPrimary}`}
@@ -176,7 +187,19 @@ export function ReportsPanel() {
                         />
                       </td>
                       <td>{report.type}</td>
-                      <td>{authorLabel(report)}</td>
+                      <td>
+                        <AuthorNicknameMenu
+                          nickname={authorLabel(report)}
+                          onSearchPosts={(nickname) => {
+                            setReportFilters({
+                              search_mode: "user",
+                              search_query: nickname,
+                              page: 1,
+                            });
+                            void loadReports();
+                          }}
+                        />
+                      </td>
                       <td>{report.description || "-"}</td>
                       <td>
                         {report.img_url ? (
