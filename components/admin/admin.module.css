@@ -790,6 +790,9 @@
   z-index: 50;
   padding: 16px;
 }
+.overlayPreview {
+  z-index: 60;
+}
 
 .confirmModal {
   width: min(360px, 100%);

@@ -115,7 +115,6 @@ export function CityEventMarkerForm() {
       const uploaded = await uploadImage(imageFile);
       imgUrl = uploaded.img_url;
     }
-    console.log('imgUrl', imgUrl);
 
     await submitCityEvent({
       id: user?.id ? Number(user.id) : undefined,

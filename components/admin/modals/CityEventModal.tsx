@@ -9,6 +9,7 @@ import { CloseIcon } from "../shared/CloseIcon";
 import { ImageAttachField } from "../shared/ImageAttachField";
 import { isValidYmd, ScheduleRow } from "../shared/ScheduleRow";
 import styles from "../admin.module.css";
+import { uploadImage } from "@/lib/api/upload";
 
 const DEFAULT_START_TIME = "09:00";
 const DEFAULT_END_TIME = "18:00";
@@ -131,8 +132,12 @@ export function CityEventModal() {
 
     setLocalError(null);
 
-    // imageFile은 현재 API 미지원 — UI만 동일하게 유지
-    void imageFile;
+    // 이미지 파일이 있는 경우 서버에 먼저 보내고 url을 받아옴
+    let imgUrl: string | null = null;
+    if (imageFile) {
+      const uploaded = await uploadImage(imageFile);
+      imgUrl = uploaded.img_url;
+    }
 
     const ok = await updateCityEvent({
       id: Number(event.id),
@@ -141,6 +146,7 @@ export function CityEventModal() {
       description: form.description,
       lat: Number(form.lat),
       lng: Number(form.lng),
+      img_url: imgUrl,
       start_at: composeIso(form.start_date, form.start_time, DEFAULT_START_TIME),
       end_at: composeIso(form.end_date, form.end_time, DEFAULT_END_TIME),
     });

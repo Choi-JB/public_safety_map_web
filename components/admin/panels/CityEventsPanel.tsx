@@ -82,7 +82,7 @@ export function CityEventsPanel() {
             />
             <DateInput
               id="event-from"
-              label="행사 시작 날짜"
+              label="기간"
               value={filters.date_from}
               onChange={(date) =>
                 setEventFilters({ date_from: date, date_preset: "" })
@@ -152,7 +152,7 @@ export function CityEventsPanel() {
                 <th>유형</th>
                 <th>제목</th>
                 <th>사진</th>
-                <th>행사 날짜</th>
+                <th>기간</th>
                 <th>작업</th>
               </tr>
             </thead>
