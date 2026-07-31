@@ -30,6 +30,7 @@ export type CityEventItem = {
   lng: number | null;
   start_at: string | null;
   end_at: string | null;
+  img_url: string | null;
 };
 
 
