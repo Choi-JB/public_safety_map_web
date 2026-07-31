@@ -16,6 +16,8 @@ import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle"
 import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
 import { useMapStore } from "@/store/mapStore";
 
+
+
 const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
@@ -102,6 +104,10 @@ export default function KakaoMap() {
   const mapRef = useRef<any>(null);
   const kakaoRef = useRef<any>(null);
   const polygonsRef = useRef<any[]>([]);
+  const tagCacheRef = useRef<Map<number, string | null>>(new Map());
+  const hoverOverlayRef = useRef<any>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverReqIdRef = useRef(0);
   const markersRef = useRef<any[]>([]);
   const infraCircleRef = useRef<any>(null);
 
@@ -316,18 +322,25 @@ export default function KakaoMap() {
         if (!cancelled) setGridsLoading(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
   }, [bounds, setGrids, setGridsLoading]);
-
   // 2b) 격자 Polygon 그리기 (표시 on/off · 등급 필터)
   useEffect(() => {
     if (!mapRef.current || !kakaoRef.current) return;
 
     const kakao = kakaoRef.current;
     const map = mapRef.current;
+
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (hoverOverlayRef.current) {
+      hoverOverlayRef.current.setMap(null);
+      hoverOverlayRef.current = null;
+    }
 
     polygonsRef.current.forEach((p) => p.setMap(null));
     polygonsRef.current = [];
@@ -336,9 +349,37 @@ export default function KakaoMap() {
 
     const gradeSet = new Set(visibleGrades);
 
+    const hideHoverTag = () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+      }
+      hoverReqIdRef.current += 1;
+      if (hoverOverlayRef.current) {
+        hoverOverlayRef.current.setMap(null);
+        hoverOverlayRef.current = null;
+      }
+    };
+
+    const showHoverTag = (lat: number, lng: number, text: string) => {
+      if (hoverOverlayRef.current) {
+        hoverOverlayRef.current.setMap(null);
+      }
+      const content = document.createElement("div");
+      content.style.cssText =
+        "padding:4px 8px;background:#fff;border:1px solid #ccc;border-radius:4px;font-size:12px;white-space:nowrap;pointer-events:none;";
+      content.textContent = text;
+      hoverOverlayRef.current = new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(lat, lng),
+        content,
+        yAnchor: 1.4,
+        zIndex: 10,
+      });
+    };
+
     grids.forEach((g) => {
       if (g.lat == null || g.lng == null) return;
-      // 등급 없는 격자는 미표시 / 꺼진 등급은 스킵
       if (!isSafetyGrade(g.safety_grade) || !gradeSet.has(g.safety_grade)) {
         return;
       }
@@ -369,8 +410,46 @@ export default function KakaoMap() {
         }
       });
 
+      // hover: 불안/보통만, 1위 태그 1개 (A안: detail + 캐시)
+      if (g.safety_grade === "불안" || g.safety_grade === "보통") {
+        const lat = g.lat;
+        const lng = g.lng;
+
+        kakao.maps.event.addListener(polygon, "mouseover", () => {
+          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+
+          hoverTimerRef.current = setTimeout(async () => {
+            const cached = tagCacheRef.current.get(g.grid_id);
+            if (cached !== undefined) {
+              if (cached) showHoverTag(lat, lng, cached);
+              return;
+            }
+
+            const reqId = ++hoverReqIdRef.current;
+            try {
+              const detail = await get<GridDetail>(`/grids/${g.grid_id}/detail`);
+              const top =
+                detail.top_tag ?? detail.tags[0]?.name ?? null;
+              tagCacheRef.current.set(g.grid_id, top);
+              if (reqId !== hoverReqIdRef.current) return;
+              if (top) showHoverTag(lat, lng, top);
+            } catch (error) {
+              console.error(error);
+            }
+          }, 180);
+        });
+
+        kakao.maps.event.addListener(polygon, "mouseout", () => {
+          hideHoverTag();
+        });
+      }
+
       polygonsRef.current.push(polygon);
     });
+
+    return () => {
+      hideHoverTag();
+    };
   }, [
     grids,
     gridsVisible,
@@ -378,7 +457,6 @@ export default function KakaoMap() {
     setSelectedGridId,
     clearSelection,
   ]);
-
   //2.5) 뷰포인트 이벤트
   useEffect(() => {
     if (!bounds || !mapRef.current || !kakaoRef.current) return;
@@ -608,35 +686,39 @@ export default function KakaoMap() {
     };
   }, [bounds, infraVisible, visibleInfraTypes, setInfrastructures]);
 
-  // 4) 선택 격자 → 인포카드 detail (인프라 마커와 분리)
-  useEffect(() => {
-    if (!selectedGridId) {
-      setGridDetail(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setDetailLoading(true);
-        const detail = await get<GridDetail>(
-          `/grids/${selectedGridId}/detail`
-        );
-        if (cancelled) return;
-        setGridDetail(detail);
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) setGridDetail(null);
-      } finally {
-        if (!cancelled) setDetailLoading(false);
+    // 4) 선택 격자 → 인포카드 detail (인프라 마커와 분리)
+    useEffect(() => {
+      if (!selectedGridId) {
+        setGridDetail(null);
+        return;
       }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedGridId, setGridDetail, setDetailLoading]);
+  
+      let cancelled = false;
+  
+      (async () => {
+        try {
+          setDetailLoading(true);
+          const detail = await get<GridDetail>(
+            `/grids/${selectedGridId}/detail`
+          );
+          if (cancelled) return;
+          tagCacheRef.current.set(
+            selectedGridId,
+            detail.top_tag ?? detail.tags[0]?.name ?? null
+          );
+          setGridDetail(detail);
+        } catch (error) {
+          console.error(error);
+          if (!cancelled) setGridDetail(null);
+        } finally {
+          if (!cancelled) setDetailLoading(false);
+        }
+      })();
+  
+      return () => {
+        cancelled = true;
+      };
+    }, [selectedGridId, setGridDetail, setDetailLoading]);
 
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;

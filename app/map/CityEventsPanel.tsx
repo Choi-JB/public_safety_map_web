@@ -399,28 +399,8 @@ export default function CityEventsPanel() {
                           {infraStats.소방서} · 편의점 {infraStats.편의점}
                         </div>
 
-                        <div style={{ fontSize: 12, marginTop: 10, marginBottom: 4 }}>태그</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {gridDetail.tags.length === 0 && (
-                            <span style={{ fontSize: 12, color: "#666" }}>없음</span>
-                          )}
-                          {gridDetail.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              style={{
-                                background: "#f1f5f9",
-                                borderRadius: 999,
-                                padding: "2px 8px",
-                                fontSize: 12,
-                              }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* 체감안전도 제외 */}
-                        <div style={{ fontSize: 12, marginTop: 12, marginBottom: 4 }}>
+                                               {/* 체감안전도 제외 */}
+                                               <div style={{ fontSize: 12, marginTop: 10, marginBottom: 4 }}>
                           활성 제보
                         </div>
                         {gridDetail.active_reports.length === 0 && (
@@ -431,6 +411,84 @@ export default function CityEventsPanel() {
                             [{r.type ?? "-"}] {r.description ?? ""}
                           </div>
                         ))}
+                          <div
+                            style={{
+                              fontSize: 12,
+                              marginTop: 12,
+                              marginBottom: 8,
+                              color: "#6b7280",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <span style={{ color: "#0d9488" }}>✓</span>
+                            {gridDetail.participant_count > 0 && (
+                              <>{gridDetail.participant_count}명 참여</>
+                            )}
+                          </div>
+                        {gridDetail.tags.length === 0 && (
+                          <div style={{ fontSize: 12, color: "#666" }}>없음</div>
+                        )}
+                        {(() => {
+                          const max =
+                            gridDetail.tags[0]?.count ?? 1; // 이미 빈도순이면 1위가 max
+                          return gridDetail.tags.map((tag) => {
+                            const pct = Math.max(
+                              (tag.count / max) * 100,
+                              tag.count > 0 ? 8 : 0 // 최소 바 너비
+                            );
+                            return (
+                              <div
+                                key={tag.name}
+                                style={{
+                                  position: "relative",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: 8,
+                                  marginTop: 6,
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  background: "#f3f4f6",
+                                  overflow: "hidden",
+                                  fontSize: 12,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: `${pct}%`,
+                                    background: "#a5f3fc",
+                                    zIndex: 0,
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    position: "relative",
+                                    zIndex: 1,
+                                    color: "#111",
+                                  }}
+                                >
+                                  {tag.name}
+                                </span>
+                                <span
+                                  style={{
+                                    position: "relative",
+                                    zIndex: 1,
+                                    fontWeight: 700,
+                                    color: "#0e7490",
+                                  }}
+                                >
+                                  {tag.count}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
                       </>
                     ) : (
                       <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>

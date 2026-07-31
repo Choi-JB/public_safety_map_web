@@ -1,6 +1,11 @@
 // 담당: 공통기반
 
 
+//feedback
+export type GridTagStat = { name: string; count: number; };
+
+
+
 //report
 export type ReportItem = {
   id: number;
@@ -100,7 +105,8 @@ export type GridDetail = {
   lng: number | null;
   infra_count: number | null;
   safety_grade: string | null;
-  tags: string[];
+  tags: GridTagStat[];
+  top_tag: string | null;
   safety_feeling_ratio: {
     안전: number;
     보통: number;
@@ -108,4 +114,6 @@ export type GridDetail = {
   };
   recent_feedbacks: GridDetailFeedback[];
   active_reports: GridDetailReport[];
+  feedback_count: number;
+  participant_count: number;
 };
