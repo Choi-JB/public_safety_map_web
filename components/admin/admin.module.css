@@ -501,6 +501,35 @@
   color: var(--admin-danger);
 }
 
+.eventTitleCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eventTitleCell .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.eventStatusScheduled {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.eventStatusOngoing {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.eventStatusEnded {
+  background: #e5e7eb;
+  border-color: #cbd5e1;
+  color: #4b5563;
+}
+
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -760,6 +789,9 @@
   place-items: center;
   z-index: 50;
   padding: 16px;
+}
+.overlayPreview {
+  z-index: 60;
 }
 
 .confirmModal {

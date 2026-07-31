@@ -4,7 +4,11 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
+import {
+  ActiveFilterChecks,
+  DatePresetChecks,
+  REPORT_DATE_PRESETS,
+} from "../shared/FilterChecks";
 import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
@@ -54,6 +58,7 @@ export function ReportsPanel() {
               idPrefix="report"
               value={filters.date_preset}
               onChange={applyReportDatePreset}
+              presets={REPORT_DATE_PRESETS}
             />
             <DateInput
               id="report-from"

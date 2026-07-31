@@ -11,6 +11,11 @@ export const DATE_PRESETS: { value: Exclude<DatePreset, "">; label: string }[] =
     { value: "1m", label: "1개월" },
   ];
 
+export const REPORT_DATE_PRESETS: {
+  value: Exclude<DatePreset, "">;
+  label: string;
+}[] = [ ...DATE_PRESETS,{ value: "today", label: "신규" }];
+
 export const FUTURE_DATE_PRESETS: {
   value: Exclude<DatePreset, "">;
   label: string;
