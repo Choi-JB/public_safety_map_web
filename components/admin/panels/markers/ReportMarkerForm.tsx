@@ -8,7 +8,8 @@ import { ImageAttachField } from "../../shared/ImageAttachField";
 import { useAdminStore } from "@/store/adminStore";
 import { useMapStore } from "@/store/mapStore";
 import { useAuthStore } from "@/store/authStore";
-import { uploadImage } from "@/lib/api/upload";
+//추가 본
+import { uploadReportImage } from "@/lib/api/upload";
 
 const REPORT_TYPE_OPTIONS = ["사고", "공사", "자연재해", "통제", "기타"] as const;
 
@@ -72,7 +73,7 @@ export function ReportMarkerForm() {
     let imgUrl: string | null = null;
     try {
       if (imageFile) {
-        const uploaded = await uploadImage(imageFile);
+        const uploaded = await uploadReportImage(imageFile); 
         imgUrl = uploaded.img_url;
       }
     } catch (error) {
