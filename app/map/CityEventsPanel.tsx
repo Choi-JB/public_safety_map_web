@@ -10,6 +10,7 @@ import {
 import { get } from "@/lib/api/client";
 import type { CityEventItem, InfrastructureItem, ReportItem } from "@/lib/api/types";
 import styles from "./CityEventsPanel.module.css";
+import MyPageMain from "@/app/mypage/main/page";
 
 /** description에서 "장소:" 이후(주소 블록) 제거 */
 function stripPlaceFromDescription(description: string | null) {
@@ -50,7 +51,7 @@ const handleStyle: CSSProperties = {
   boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
 };
 
-type PanelTab = "grid" | "events" | "reports";
+type PanelTab = "grid" | "events" | "reports" | "mypage";
 
 /** 카드 공통 스타일 (격자 / 행사 동일) */
 const cardStyle: CSSProperties = {
@@ -246,6 +247,15 @@ export default function CityEventsPanel() {
     if (r.lat != null && r.lng != null) moveTo?.(r.lat, r.lng, 4);
   };
 
+  const focusReportOnMap = (r: {
+    id: number;
+    lat: number | null;
+    lng: number | null;
+  }) => {
+    setSelectedReportId(r.id);
+    if (r.lat != null && r.lng != null) moveTo?.(r.lat, r.lng, 4);
+  };
+
   const withCoord = (i: InfrastructureItem) => i.lat != null && i.lng != null;
   const infraStats = {
     CCTV: gridInfras.filter((i) => i.type === "CCTV" && withCoord(i)).length,
@@ -332,6 +342,12 @@ export default function CityEventsPanel() {
           label="제보"
           icon="!"
           onClick={() => onRailClick("reports")}
+        />
+        <RailButton
+          active={detailOpen && sidePanelTab === "mypage"}
+          label="내 제보"
+          icon="👤"
+          onClick={() => onRailClick("mypage")}
         />
       </nav>
 
@@ -735,8 +751,15 @@ export default function CityEventsPanel() {
                       </div>
                     </button>
                   );
-                })}
+                })} 
               </>
+            )}
+
+            {/* mypage */}
+            {sidePanelTab === "mypage" && (
+              
+                <MyPageMain onSelectReport={focusReportOnMap} />
+              
             )}
         </div>
         </div>

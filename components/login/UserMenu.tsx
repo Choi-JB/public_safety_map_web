@@ -70,6 +70,15 @@ export function UserMenu() {
             {user.email != null && (
               <div className={styles.userMenuMeta}>{user.email}</div>
             )}
+            {user.role === "ADMIN" && (
+              <Link
+                href="/admin"
+                className={styles.userMenuAdminLink}
+                onClick={() => setOpen(false)}
+              >
+                관리자 페이지
+              </Link>
+            )}
           </div>
 
           <div className={styles.userMenuActions}>

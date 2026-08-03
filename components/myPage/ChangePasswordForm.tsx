@@ -56,7 +56,7 @@ type Props = {
   showBrand?: boolean;
   onCancel?: () => void;
   onSuccess?: (message?: string) => void;
-  /** 실제 변경 API. 없으면 /admin/change-pw 호출 */
+  /** 실제 변경 API.  /auth/change-pw 호출 */
   onSubmitPassword?: (payload: ChangePasswordFormPayload) => Promise<void>;
 };
 

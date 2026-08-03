@@ -1,0 +1,47 @@
+// 담당: 공통기반
+// 내용: 마이페이지 API
+
+import { post } from "./client";
+
+export type MyPageSummary = {
+  reportCount: number;
+  feedbackCount: number;
+};
+
+export type MyReport = {
+  id: number | string;
+  type: string | null;
+  description: string | null;
+  lat: number | null;
+  lng: number | null;
+  created_at: string | null;
+  expire_at: string | null;
+};
+
+/**
+ * 마이페이지 요약 (제보/피드백 수)
+ * @param userId 유저 ID
+ */
+export async function fetchMyPageSummary(userId: number): Promise<MyPageSummary> {
+  return post<MyPageSummary>("/mypage", { userId });
+}
+
+/**
+ * 마이페이지 제보 목록 (최신순)
+ * body: userId / query: page, limit
+ */
+export async function fetchMyPageReports(
+  userId: number,
+  page: number,
+  limit = 10,
+): Promise<MyReport[]> {
+  const qs = `?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`;
+  const data = await post<MyReport[] | { reports: MyReport[] }>(
+    `/mypage/report${qs}`,
+    { userId },
+  );
+
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.reports)) return data.reports;
+  return [];
+}
