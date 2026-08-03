@@ -66,8 +66,8 @@ type MapState = {
   sidePanelOpen: boolean;
   setSidePanelOpen: (open: boolean) => void;
   /** 왼쪽 패널 탭 (레일 / 지도 클릭 공유) */
-  sidePanelTab: "grid" | "events" | "reports";
-  setSidePanelTab: (tab: "grid" | "events" | "reports") => void;
+  sidePanelTab: "grid" | "events" | "reports" | "mypage";
+  setSidePanelTab: (tab: "grid" | "events" | "reports" | "mypage") => void;
 
   setBounds: (bounds: MapBounds) => void;
   setGrids: (grids: GridItem[]) => void;

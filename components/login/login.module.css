@@ -264,6 +264,19 @@
   word-break: break-all;
 }
 
+.userMenuAdminLink {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f5d7c;
+  text-decoration: none;
+}
+
+.userMenuAdminLink:hover {
+  text-decoration: underline;
+}
+
 .userMenuActions {
   display: flex;
   align-items: stretch;
