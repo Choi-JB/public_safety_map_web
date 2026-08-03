@@ -181,23 +181,47 @@ export default function CityEventsPanel() {
   const sidePanelTab = useMapStore((s) => s.sidePanelTab);
   const setSidePanelTab = useMapStore((s) => s.setSidePanelTab);
   const selectedEventCardRef = useRef<HTMLButtonElement | null>(null);
+  const eventListRef = useRef<HTMLDivElement | null>(null);
 
-  // 선택한 행사 카드로 스크롤
+
+    // 선택한 행사 카드로 스크롤 (리스트 내부만 → 헤더 고정)
   useEffect(() => {
-    if (sidePanelTab === "reports" && selectedReportId != null && sidePanelOpen) {
-      selectedReportCardRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
     if (sidePanelTab !== "events" || selectedEventId == null || !sidePanelOpen) {
       return;
     }
-    selectedEventCardRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-  }, [sidePanelTab, selectedEventId, sidePanelOpen, events, reports]);
+
+    const t = window.setTimeout(() => {
+      const list = eventListRef.current;
+      const card = selectedEventCardRef.current;
+      if (!list || !card) return;
+
+      // 스크롤 위치 조정
+      const PEEK_TOP = 120;
+      const top = card.offsetTop - list.offsetTop - PEEK_TOP;
+      list.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [sidePanelTab, selectedEventId, sidePanelOpen, events]);
+  
+  // 선택한 제보 카드로 스크롤 (리스트 내부만 → 헤더 고정)
+  useEffect(() => {
+    if (sidePanelTab !== "reports" || selectedReportId == null || !sidePanelOpen) {
+      return;
+    }
+
+    const t = window.setTimeout(() => {
+      const list = eventListRef.current;
+      const card = selectedReportCardRef.current;
+      if (!list || !card) return;
+
+      const PEEK_TOP = 120;
+      const top = card.offsetTop - list.offsetTop - PEEK_TOP;
+      list.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [sidePanelTab, selectedReportId, sidePanelOpen, reports]);
 
   /** 레일 클릭: 다른 메뉴면 전환·열기, 같은 메뉴면 접기/펼치기 */
   const onRailClick = (next: PanelTab) => {
@@ -361,6 +385,7 @@ export default function CityEventsPanel() {
             </div>
 
             <div
+              ref={eventListRef}
               className={styles.scrollHide}
               style={{ flex: 1, minHeight: 0, padding: "12px 20px 12px 12px" }}
             >
@@ -539,9 +564,11 @@ export default function CityEventsPanel() {
                         ...cardStyle,
                         cursor: "pointer",
                         background: selected ? "#fdf2f8" : soon ? "#f3f4f6" : "#fff",
-                        border: selected
-                          ? "2px solid #ec4899"
-                          : "1px solid #e5e7eb",
+                        // 1px↔2px 대신 항상 2px (레이아웃 점프 방지)
+                        border: selected ? "2px solid #ec4899" : "2px solid #e5e7eb",
+                        boxShadow: selected ? "0 4px 14px rgba(236, 72, 153, 0.2)" : "none",
+                        transition:
+                          "background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
                       }}
                     >
                       {soon && (
@@ -559,6 +586,25 @@ export default function CityEventsPanel() {
                           3일 내 시작
                         </div>
                       )}
+                      {e.img_url && (
+                      <img
+                        src={
+                          e.img_url.startsWith("http")
+                            ? e.img_url
+                            : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4100"}${e.img_url.startsWith("/") ? "" : "/"}${e.img_url}`
+                        }
+                        alt={e.title ?? "행사 사진"}
+                        style={{
+                          width: "100%",
+                          height: selected ? 320 : 120,
+                          objectFit: "cover",
+                          borderRadius: 6,
+                          marginBottom: 8,
+                          display: "block",
+                          transition: "height 0.3s ease",
+                        }}
+                      />
+                    )}
                       <div style={{ fontWeight: 600, fontSize: 13 }}>
                         {e.title ?? "(제목 없음)"}
                       </div>
@@ -602,7 +648,6 @@ export default function CityEventsPanel() {
                       시작 전 행사가 없습니다.
                     </div>
                   )}
-
                   {upcoming.map((e) => {
                     const selected = e.id === selectedEventId;
                     return (
@@ -655,12 +700,6 @@ export default function CityEventsPanel() {
         {/* ========== 제보 ========== */}
             {sidePanelTab === "reports" && (
               <>
-                {reportsLoading && (
-                  <div style={{ fontSize: 12, color: "#666" }}>제보 불러오는 중...</div>
-                )}
-                {!reportsLoading && reports.length === 0 && (
-                  <div style={{ fontSize: 12, color: "#666" }}>근처 제보가 없습니다.</div>
-                )}
                 {reports.map((r) => {
                   const selected = r.id === selectedReportId;
                   return (
@@ -673,9 +712,31 @@ export default function CityEventsPanel() {
                         ...cardStyle,
                         cursor: "pointer",
                         background: selected ? "#fef2f2" : "#fff",
-                        border: selected ? "2px solid #dc2626" : "1px solid #e5e7eb",
+                        border: selected ? "2px solid #dc2626" : "2px solid #e5e7eb",
+                        boxShadow: selected ? "0 4px 14px rgba(220, 38, 38, 0.2)" : "none",
+                        transition:
+                          "background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
                       }}
                     >
+                      {r.img_url && (
+                        <img
+                          src={
+                            r.img_url.startsWith("http")
+                              ? r.img_url
+                              : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4100"}${r.img_url.startsWith("/") ? "" : "/"}${r.img_url}`
+                          }
+                          alt={r.type ?? "제보 사진"}
+                          style={{
+                            width: "100%",
+                            height: selected ? 320 : 120,
+                            objectFit: "cover",
+                            borderRadius: 6,
+                            marginBottom: 8,
+                            display: "block",
+                            transition: "height 0.3s ease",
+                          }}
+                        />
+                      )}
                       <div style={{ fontWeight: 600, fontSize: 13 }}>
                         {r.type ?? "제보"}
                       </div>
@@ -685,7 +746,8 @@ export default function CityEventsPanel() {
                         </div>
                       )}
                       <div style={{ fontSize: 12, color: "#374151", marginTop: 6 }}>
-                        {r.user_nickname ?? "-"} {formatDateTime(r.created_at)}~{formatDateTime(r.expire_at)}
+                        {r.user_nickname ?? "-"} {formatDateTime(r.created_at)}~
+                        {formatDateTime(r.expire_at)}
                       </div>
                     </button>
                   );
