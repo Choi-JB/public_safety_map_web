@@ -63,6 +63,16 @@ export function UserMenu() {
         내정보
       </button>
 
+      {/* 기존 "내 제보" 버튼 위/아래에 추가 */}
+      <Link
+        href="/chat"
+        className={styles.userMenuAction}
+        onClick={() => setOpen(false)}
+        style={{ textDecoration: "none", display: "block", textAlign: "center" }}
+      >
+        채팅
+      </Link>
+
       {open && (
         <div className={styles.userMenuPanel} role="dialog" aria-label="내정보">
           <div className={styles.userMenuHeader}>
