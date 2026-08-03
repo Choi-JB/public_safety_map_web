@@ -16,14 +16,13 @@ export const REPORT_DATE_PRESETS: {
   label: string;
 }[] = [ ...DATE_PRESETS,{ value: "today", label: "신규" }];
 
-export const FUTURE_DATE_PRESETS: {
+export const EVENT_DATE_PRESETS: {
   value: Exclude<DatePreset, "">;
   label: string;
 }[] = [
-  { value: "1m", label: "1개월 후" },
-  { value: "3m", label: "3개월 후" },
-  { value: "6m", label: "6개월 후" },
-  { value: "1y", label: "1년 후" },
+  { value: "this_week", label: "이번 주" },
+  { value: "this_month", label: "이번 달" },
+  { value: "this_year", label: "올해" },
 ];
 
 const ACTIVE_OPTIONS: { value: ActiveFilter; label: string }[] = [

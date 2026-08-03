@@ -25,6 +25,7 @@ import type {
   CreateReportPayload,
   DatePreset,
   DeleteTarget,
+  EventScheduleStatus,
   MapFocus,
   RestoreTarget,
   UpdateEventPayload,
@@ -36,6 +37,8 @@ type ReportFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
+  search_mode: "user" | "keyword";
+  search_query: string;
   page: number;
   limit: number;
 };
@@ -46,7 +49,8 @@ type FeedbackFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
-  keyword: string;
+  search_mode: "user" | "keyword";
+  search_query: string;
   page: number;
   limit: number;
 };
@@ -57,9 +61,21 @@ type EventFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
+  keyword: string;
+  status: EventScheduleStatus | "";
   page: number;
   limit: number;
 };
+
+function resolveListSearchParams(
+  mode: "user" | "keyword",
+  query: string,
+): { nickname?: string; keyword?: string } {
+  const q = query.trim();
+  if (!q) return {};
+  if (mode === "user") return { nickname: q };
+  return { keyword: q };
+}
 
 function toDateInputValue(date: Date) {
   const y = date.getFullYear();
@@ -81,19 +97,54 @@ export function getDateRangeFromPreset(preset: Exclude<DatePreset, "">) {
   };
 }
 
-/** 오늘부터 선택한 기간 이후까지의 도시정보 조회 범위 */
-export function getFutureDateRangeFromPreset(
+/** 도시정보용: 이번 주(월~일) / 이번 달 / 올해 */
+export function getEventDateRangeFromPreset(
   preset: Exclude<DatePreset, "">,
 ) {
-  const from = new Date();
-  const to = new Date();
-  if (preset === "1y") to.setFullYear(to.getFullYear() + 1);
-  if (preset === "6m") to.setMonth(to.getMonth() + 6);
-  if (preset === "3m") to.setMonth(to.getMonth() + 3);
-  if (preset === "1m") to.setMonth(to.getMonth() + 1);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+
+  if (preset === "this_week") {
+    const day = now.getDay(); // 0=일 … 6=토
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const from = new Date(y, m, d + mondayOffset);
+    const to = new Date(y, m, d + mondayOffset + 6);
+    return {
+      date_from: toDateInputValue(from),
+      date_to: toDateInputValue(to),
+    };
+  }
+
+  if (preset === "this_month") {
+    return {
+      date_from: toDateInputValue(new Date(y, m, 1)),
+      date_to: toDateInputValue(new Date(y, m + 1, 0)),
+    };
+  }
+
+  if (preset === "this_year") {
+    return {
+      date_from: toDateInputValue(new Date(y, 0, 1)),
+      date_to: toDateInputValue(new Date(y, 11, 31)),
+    };
+  }
+
+  // fallback: 과거 프리셋과 동일하게 오늘까지
+  return getDateRangeFromPreset(preset);
+}
+
+/** 년·월로 조회 범위 설정 (시작=해당 월 1일, 종료=해당 월 말일) */
+export function getDateRangeFromYearMonth(
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+) {
   return {
-    date_from: toDateInputValue(from),
-    date_to: toDateInputValue(to),
+    date_from: toDateInputValue(new Date(fromYear, fromMonth - 1, 1)),
+    date_to: toDateInputValue(new Date(toYear, toMonth, 0)),
   };
 }
 
@@ -162,7 +213,7 @@ type AdminState = {
 };
 
 const initialDateRange = getDateRangeFromPreset("1m");
-const initialEventDateRange = getFutureDateRangeFromPreset("1m");
+const initialEventDateRange = getEventDateRangeFromPreset("this_month");
 
 const defaultReportFilters: ReportFilters = {
   type: "",
@@ -170,6 +221,8 @@ const defaultReportFilters: ReportFilters = {
   date_preset: "1m",
   date_from: initialDateRange.date_from,
   date_to: initialDateRange.date_to,
+  search_mode: "keyword",
+  search_query: "",
   page: 1,
   limit: 10,
 };
@@ -180,7 +233,8 @@ const defaultFeedbackFilters: FeedbackFilters = {
   date_preset: "1m",
   date_from: initialDateRange.date_from,
   date_to: initialDateRange.date_to,
-  keyword: "",
+  search_mode: "keyword",
+  search_query: "",
   page: 1,
   limit: 10,
 };
@@ -188,9 +242,11 @@ const defaultFeedbackFilters: FeedbackFilters = {
 const defaultEventFilters: EventFilters = {
   type: "",
   filter: "active",
-  date_preset: "1m",
+  date_preset: "this_month",
   date_from: initialEventDateRange.date_from,
   date_to: initialEventDateRange.date_to,
+  keyword: "",
+  status: "",
   page: 1,
   limit: 10,
 };
@@ -269,7 +325,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }));
       return;
     }
-    const range = getFutureDateRangeFromPreset(preset);
+    const range = getEventDateRangeFromPreset(preset);
     set((s) => ({
       eventFilters: {
         ...s.eventFilters,
@@ -296,6 +352,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         date_preset: "1m",
         date_from: range.date_from,
         date_to: range.date_to,
+        search_mode: "keyword",
+        search_query: "",
         page: 1,
         limit: 10,
       },
@@ -310,21 +368,24 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         date_preset: "1m",
         date_from: range.date_from,
         date_to: range.date_to,
-        keyword: "",
+        search_mode: "keyword",
+        search_query: "",
         page: 1,
         limit: 10,
       },
     });
   },
   resetEventFilters: () => {
-    const range = getFutureDateRangeFromPreset("1m");
+    const range = getEventDateRangeFromPreset("this_month");
     set({
       eventFilters: {
         type: "",
         filter: "active",
-        date_preset: "1m",
+        date_preset: "this_month",
         date_from: range.date_from,
         date_to: range.date_to,
+        keyword: "",
+        status: "",
         page: 1,
         limit: 10,
       },
@@ -348,12 +409,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const { reportFilters } = get();
     set({ loading: true, error: null });
     try {
+      const search = resolveListSearchParams(
+        reportFilters.search_mode,
+        reportFilters.search_query,
+      );
       const { reports, types } = await fetchReports({
         page: reportFilters.page,
         limit: reportFilters.limit,
         filter: reportFilters.filter,
         date_from: `${reportFilters.date_from} 00:00:00.000` || undefined,
         date_to: `${reportFilters.date_to} 23:59:59.999` || undefined,
+        ...search,
       });
       const filtered = reportFilters.type
         ? reports.filter((r) => r.type === reportFilters.type)
@@ -375,12 +441,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const { feedbackFilters, feedbackSafetyFeelings } = get();
     set({ loading: true, error: null });
     try {
+      const search = resolveListSearchParams(
+        feedbackFilters.search_mode,
+        feedbackFilters.search_query,
+      );
       const feedbacks = await fetchFeedbacks({
         page: feedbackFilters.page,
         limit: feedbackFilters.limit,
         filter: feedbackFilters.filter,
         date_from: feedbackFilters.date_from || undefined,
         date_to: feedbackFilters.date_to || undefined,
+        ...search,
       });
       const filtered = feedbacks.filter((f) => {
         if (
@@ -388,11 +459,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           f.safety_feeling !== feedbackFilters.safety_feeling
         ) {
           return false;
-        }
-        if (feedbackFilters.keyword) {
-          const q = feedbackFilters.keyword.toLowerCase();
-          const hay = `${f.comment} ${f.user?.nickname ?? ""}`.toLowerCase();
-          if (!hay.includes(q)) return false;
         }
         return true;
       });
@@ -420,12 +486,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const { eventFilters } = get();
     set({ loading: true, error: null });
     try {
+      const keyword = eventFilters.keyword.trim() || undefined;
       const { events, types } = await fetchEvents({
         page: eventFilters.page,
         limit: eventFilters.limit,
         filter: eventFilters.filter,
         date_from: eventFilters.date_from || undefined,
         date_to: eventFilters.date_to || undefined,
+        keyword,
+        status: eventFilters.status || undefined,
       });
       const filtered = eventFilters.type
         ? events.filter((e) => e.type === eventFilters.type)

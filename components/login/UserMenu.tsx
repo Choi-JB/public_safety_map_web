@@ -11,7 +11,6 @@ import styles from "./login.module.css";
 export function UserMenu() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const authType = useAuthStore((s) => s.authType);
   const logout = useAuthStore((s) => s.logout);
 
   const [open, setOpen] = useState(false);
@@ -51,8 +50,6 @@ export function UserMenu() {
   if (!user) return null;
 
   const nickname = user.nickname?.trim() || "사용자";
-  const roleLabel =
-    authType === "session" || user.role === "ADMIN" ? "(관리자)" : "";
 
   return (
     <div ref={rootRef} style={{ position: "relative" }}>
@@ -68,29 +65,30 @@ export function UserMenu() {
 
       {open && (
         <div className={styles.userMenuPanel} role="dialog" aria-label="내정보">
-          <div className={styles.userMenuName}>{nickname} {roleLabel} </div>
-          <div className={styles.userMenuMeta}>
-            {user.email != null ? ` · ${user.email}` : null}
+          <div className={styles.userMenuHeader}>
+            <div className={styles.userMenuName}>{nickname}</div>
+            {user.email != null && (
+              <div className={styles.userMenuMeta}>{user.email}</div>
+            )}
           </div>
 
-          {authType === "session" && (
-            <Link
-              href="/admin"
-              className={styles.userMenuLink}
+          <div className={styles.userMenuActions}>
+            <button
+              type="button"
+              className={styles.userMenuAction}
               onClick={() => setOpen(false)}
             >
-              관리자 페이지
-            </Link>
-          )}
-
-          <button
-            type="button"
-            className={styles.userMenuLogout}
-            disabled={loggingOut}
-            onClick={() => void handleLogout()}
-          >
-            {loggingOut ? "로그아웃 중…" : "로그아웃"}
-          </button>
+              내 제보
+            </button>
+            <button
+              type="button"
+              className={styles.userMenuAction}
+              disabled={loggingOut}
+              onClick={() => void handleLogout()}
+            >
+              {loggingOut ? "로그아웃 중…" : "로그아웃"}
+            </button>
+          </div>
         </div>
       )}
     </div>

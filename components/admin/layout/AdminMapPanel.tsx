@@ -7,7 +7,6 @@ import { useAdminStore } from "@/store/adminStore";
 import { BackIcon } from "../shared/BackIcon";
 import styles from "../admin.module.css";
 
-import MapControls  from "@/app/map/MapControls";
 
 import AdminMap from "../shared/AdminMap";
 

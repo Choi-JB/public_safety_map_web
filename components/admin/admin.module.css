@@ -249,6 +249,128 @@
   align-items: end;
 }
 
+/* 필터 줄 셀렉트: 고정 min-width 대신 선택지 길이에 맞춤 */
+.filterRow .field {
+  min-width: 0;
+  width: max-content;
+}
+
+.filterRow .field > select {
+  width: auto;
+  field-sizing: content;
+  max-width: 12rem;
+}
+
+.yearMonthRange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.yearMonthRange select {
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 6px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.yearSelect {
+  width: 5.5rem;
+  min-width: 0;
+}
+
+.monthSelect {
+  width: 3.6rem;
+  min-width: 0;
+  padding-left: 4px;
+  padding-right: 2px;
+}
+
+.yearMonthSep {
+  color: var(--admin-muted);
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.searchQueryRow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.searchQueryRow select {
+  flex: 0 0 auto;
+  width: auto;
+  field-sizing: content;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 6px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.searchQueryRow input {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.authorNicknameWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.authorNickname {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.authorNickname:hover {
+  text-decoration: underline;
+}
+
+.authorMenu {
+  position: fixed;
+  z-index: 80;
+  min-width: 72px;
+  background: #fff;
+  border: 1px solid #8a8a8a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.authorMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: #fff;
+  color: var(--admin-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.authorMenuItem:hover {
+  background: #f3f5f7;
+}
+
 .field {
   display: flex;
   flex-direction: column;
