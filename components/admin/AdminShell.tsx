@@ -14,10 +14,12 @@ import { DashboardPanel } from "./panels/DashboardPanel";
 import { FeedbacksPanel } from "./panels/FeedbacksPanel";
 import { MarkersPanel } from "./panels/markers/MarkersPanel";
 import { ReportsPanel } from "./panels/ReportsPanel";
+import { SettingPanel } from "./panels/SettingPanel";
 import styles from "./admin.module.css";
 
 import { useEffect } from "react";
-import { useMapStore } from "@/store/mapStore";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 
 function PanelContent() {
   const tab = useAdminStore((s) => s.tab);
@@ -33,6 +35,8 @@ function PanelContent() {
       return <MarkersPanel />;
     case "city-events":
       return <CityEventsPanel />;
+    case "settings":
+      return <SettingPanel />;
     default:
       return null;
   }
@@ -42,12 +46,35 @@ export function AdminShell() {
   const error = useAdminStore((s) => s.error);
   const message = useAdminStore((s) => s.message);
   const clearNotice = useAdminStore((s) => s.clearNotice);
+  const router = useRouter();
 
   useEffect(() => {
     return () => {
       useAdminStore.setState({ mapFocus: null });
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+  
+    const isSessionError =
+      error.includes("세션") ||
+      error.includes("만료") ||
+      error.includes("다른"); // 백엔드 문구에 맞게 조정
+  
+    if (!isSessionError) return;
+  
+    alert(error);
+    clearNotice();
+    // auth 상태 정리
+    useAuthStore.setState({
+      user: null,
+      authType: null,
+      sessionId: null,
+      accessToken: null,
+    });
+    router.push("/login");
+  }, [error, clearNotice, router]);
 
   return (
     <div className={styles.shell}>
@@ -93,6 +120,7 @@ export function AdminShell() {
       <CityEventModal />
       <DeleteConfirmModal />
       <RestoreConfirmModal />
+  
     </div>
   );
 }

@@ -129,13 +129,17 @@ export const useAuthStore = create<AuthState>()(
           sessionId: "active",
         }));
         return true;
-      } catch {
+      } catch(err) {
+        
         set({
           user: null,
           authType: null,
           sessionId: null,
           accessToken: null,
-          error: "세션이 만료되었습니다. 다시 로그인해주세요."
+          error:
+            err instanceof Error
+              ? err.message
+              : "세션이 만료되었습니다. 다시 로그인해주세요.",
         });
         return false;
       }

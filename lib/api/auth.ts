@@ -1,6 +1,6 @@
 // 담당: 공통기반
 // 작성자 : 최정봉
-// 내용 : 로그인 API (로그인, 로그아웃 전용)
+// 내용 : 인증 API (로그인, 로그아웃, 회원가입, 비밀번호 변경)
 import type { ApiResponse } from "./types";
 
 function getBaseUrl() {
@@ -107,3 +107,36 @@ export async function logoutApi(): Promise<void> {
       throw new Error(message);
     }
   }
+
+export type ChangePasswordPayload = {
+  email: string;
+  password: string;
+  newPassword: string;
+};
+
+/**
+ * 비밀번호 변경
+ */
+export async function changePassword(payload: ChangePasswordPayload): Promise<void> {
+  const res = await fetch(`${getBaseUrl()}/auth/change-pw`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  let json: ApiResponse<unknown>;
+  try {
+    json = (await res.json()) as ApiResponse<unknown>;
+  } catch {
+    throw new Error("서버 응답을 파싱하지 못했습니다.");
+  }
+
+  if (!res.ok || ("success" in json && json.success === false)) {
+    const message =
+      "message" in json && json.message
+        ? json.message
+        : `비밀번호 변경 실패 (${res.status})`;
+    throw new Error(message);
+  }
+}

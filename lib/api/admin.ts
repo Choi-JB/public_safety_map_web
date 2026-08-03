@@ -213,6 +213,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       "message" in json && json.message
         ? json.message
         : `요청 실패 (${res.status})`;
+
+    /**
+     * 세션 만료 처리
+     * @param res 응답
+     * @param message 응답 메시지
+     * @throws 세션 만료 예외 발생
+     */
+    if (
+      res.status === 401 ||
+      res.status === 403 ||
+      message.includes("세션")
+    ) {
+      const err = new Error(message);
+      (err as Error & { code?: string }).code = "SESSION_EXPIRED";
+      throw err;
+    }
     throw new Error(message);
   }
 
