@@ -118,3 +118,31 @@ export type GridDetail = {
   feedback_count: number;
   participant_count: number;
 };
+
+/** GET /accident-zones */
+export type AccidentZoneType =
+  | "pedestrian"
+  | "bicycle"
+  | "motorcycle"
+  | "schoolzone";
+
+export type AccidentZoneItem = {
+  id: string;
+  type: AccidentZoneType;
+  name: string;
+  yearCd: string;
+  lat: number | null;
+  lng: number | null;
+  occrrnc_cnt: number | null;
+  caslt_cnt: number | null;
+  dth_dnv_cnt: number | null;
+  path: Array<{ lat: number; lng: number }>;
+};
+
+export type AccidentZonesData = {
+  siDo: string;
+  guGun: string;
+  types: AccidentZoneType[];
+  count: number;
+  items: AccidentZoneItem[];
+};
