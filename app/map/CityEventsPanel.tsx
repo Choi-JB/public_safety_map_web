@@ -8,7 +8,12 @@ import {
   useMapStore,
 } from "@/store/mapStore";
 import { get } from "@/lib/api/client";
-import type { CityEventItem, InfrastructureItem, ReportItem } from "@/lib/api/types";
+import type {
+  CityEventItem,
+  GridDetail,
+  InfrastructureItem,
+  ReportItem,
+} from "@/lib/api/types";
 import styles from "./CityEventsPanel.module.css";
 import MyPageMain from "@/app/mypage/main/page";
 
@@ -254,6 +259,17 @@ export default function CityEventsPanel() {
   }) => {
     setSelectedReportId(r.id);
     if (r.lat != null && r.lng != null) moveTo?.(r.lat, r.lng, 4);
+  };
+
+  const focusFeedbackOnMap = async (gridId: number | string) => {
+    try {
+      const detail = await get<GridDetail>(`/grids/${gridId}/detail`);
+      if (detail.lat != null && detail.lng != null) {
+        moveTo?.(detail.lat, detail.lng, 4);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const withCoord = (i: InfrastructureItem) => i.lat != null && i.lng != null;
@@ -758,7 +774,10 @@ export default function CityEventsPanel() {
             {/* mypage */}
             {sidePanelTab === "mypage" && (
               
-                <MyPageMain onSelectReport={focusReportOnMap} />
+                <MyPageMain
+                  onSelectReport={focusReportOnMap}
+                  onSelectFeedback={(gridId) => void focusFeedbackOnMap(gridId)}
+                />
               
             )}
         </div>

@@ -18,6 +18,21 @@ export type MyReport = {
   expire_at: string | null;
 };
 
+export type MyFeedbackTag = {
+  id: number;
+  name: string;
+};
+
+export type MyFeedback = {
+  id: number;
+  comment: string | null;
+  safety_feeling: string | null;
+  img_url: string | null;
+  created_at: string | null;
+  grid_id: string | number | null;
+  tags: MyFeedbackTag[];
+};
+
 /**
  * 마이페이지 요약 (제보/피드백 수)
  * @param userId 유저 ID
@@ -43,5 +58,25 @@ export async function fetchMyPageReports(
 
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.reports)) return data.reports;
+  return [];
+}
+
+/**
+ * 마이페이지 피드백 목록 (최신순)
+ * body: userId / query: page, limit
+ */
+export async function fetchMyPageFeedbacks(
+  userId: number,
+  page: number,
+  limit = 10,
+): Promise<MyFeedback[]> {
+  const qs = `?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`;
+  const data = await post<MyFeedback[] | { feedbacks: MyFeedback[] }>(
+    `/mypage/feedback${qs}`,
+    { userId },
+  );
+
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.feedbacks)) return data.feedbacks;
   return [];
 }
