@@ -73,12 +73,18 @@ export function LoginForm() {
 
   return (
     <>
-      <h1 className={styles.brand}>공공안전지도</h1>
+      <Link
+        href="/map"
+        className={styles.brand}
+        title="지도 화면으로 돌아가기"
+      >
+        공공안전지도
+      </Link>
 
       <div className={styles.card}>
         <form className={styles.form} onSubmit={(e) => void handleSubmit(e)}>
           <div className={styles.field}>
-            <label htmlFor="login-email">아이디 또는 전화번호</label>
+            <label htmlFor="login-email">이메일 email</label>
             <div className={styles.inputRow}>
               <input
                 id="login-email"
@@ -150,8 +156,7 @@ export function LoginForm() {
       </div>
 
       <p className={styles.hint}>
-        관리자 계정은 세션으로, 일반 유저 계정은 JWT로 로그인됩니다.
-        (배포 때는 이 문구 삭제)
+        
       </p>
     </>
   );

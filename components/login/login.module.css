@@ -5,7 +5,7 @@
   --login-muted: #8e8e8e;
   --login-line: #e5e5e5;
   --login-line-focus: #03c75a;
-  --login-green: #03c75a;
+  --login-green: #2f5d7c;
   --login-danger: #ff3b30;
   min-height: 100vh;
   display: flex;
@@ -25,6 +25,12 @@
   letter-spacing: -0.04em;
   text-align: center;
   color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brand:hover {
+  color: #2f5d7c;
 }
 
 .card {
@@ -119,7 +125,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: #02b350;
+  background: #264a63;
 }
 
 .button:disabled {

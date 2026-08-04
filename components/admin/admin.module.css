@@ -255,6 +255,12 @@
   width: max-content;
 }
 
+.filterRow .dateInputField {
+  width: calc(30px + 10ch + 16px);
+  min-width: calc(30px + 10ch + 16px);
+  max-width: calc(30px + 10ch + 16px);
+}
+
 .filterRow .field > select {
   width: auto;
   field-sizing: content;
@@ -837,9 +843,28 @@
 }
 
 .dateInputField {
-  width: calc(36px + 10ch + 20px);
-  min-width: 0;
+  width: calc(30px + 10ch + 16px);
+  min-width: calc(30px + 10ch + 16px);
+  max-width: calc(30px + 10ch + 16px);
   flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+.dateInputField .iconInput {
+  width: 100%;
+}
+
+.dateInputField .iconInputBtn {
+  width: 30px;
+}
+
+.dateTextInput {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  padding: 6px 6px !important;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
 }
 
 .iconInput {
