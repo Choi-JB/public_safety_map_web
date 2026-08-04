@@ -47,7 +47,7 @@ export function ReportsPanel() {
   }, [loadReports, filters.page, filters.filter]);
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>제보 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>

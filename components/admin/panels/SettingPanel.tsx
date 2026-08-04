@@ -12,9 +12,9 @@ export function SettingPanel() {
 
   if (changingPassword) {
     return (
-      <div>
+      <div className={styles.panelRoot}>
         <div className={styles.panelHeader}>비밀번호 변경</div>
-        <div className={styles.panelBody}>
+        <div className={styles.panelBodyScroll}>
           <ChangePasswordForm
             showBrand={false}
             onCancel={() => setChangingPassword(false)}
@@ -29,9 +29,9 @@ export function SettingPanel() {
   }
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>설정</div>
-      <div className={styles.panelBody}>
+      <div className={styles.panelBodyScroll}>
         {successMessage && (
           <div className={`${styles.notice} ${styles.noticeOk}`}>
             {successMessage}

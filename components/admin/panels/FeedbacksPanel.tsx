@@ -44,7 +44,7 @@ export function FeedbacksPanel() {
   }, [loadFeedbacks, filters.page, filters.filter]);
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>피드백 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>
@@ -175,8 +175,8 @@ export function FeedbacksPanel() {
                           onClick={() =>
                             setMapFocus({
                               // 피드백은 격자 단위 — 격자 중심좌표 연동 전 미리보기
-                              lat: 37.5665,
-                              lng: 126.978,
+                              lat: item.grid?.lat ?? 0,
+                              lng: item.grid?.lng ?? 0,
                               label: item.user?.nickname || item.safety_feeling,
                               id: item.id,
                               kind: "feedback",

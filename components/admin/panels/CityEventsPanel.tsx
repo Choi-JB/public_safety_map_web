@@ -120,7 +120,7 @@ export function CityEventsPanel() {
   }, []);
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>도시정보 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>

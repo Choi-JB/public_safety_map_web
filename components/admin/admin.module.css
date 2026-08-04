@@ -12,7 +12,13 @@
   --admin-warn: #8a6a2f;
   --admin-ok: #2f6b4f;
   --admin-inactive: #f0f2f4;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--admin-bg);
   color: var(--admin-text);
   font-family: "Segoe UI", "Noto Sans KR", sans-serif;
@@ -30,6 +36,7 @@
   gap: 16px;
   padding: 0 20px;
   height: 56px;
+  flex-shrink: 0;
   background: var(--admin-surface);
   border-bottom: 1px solid var(--admin-border);
 }
@@ -87,7 +94,9 @@
   grid-template-columns: 40% 60%;
   gap: 16px;
   padding: 16px;
-  min-height: calc(70vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mapCard,
@@ -95,15 +104,15 @@
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
   border-radius: 8px;
-  min-height: calc(100vh - 44px);
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 .mapCard {
   display: flex;
   flex-direction: column;
-  align-self: start;
-  min-height: 0;
+  align-self: stretch;
 }
 
 .mapHeader,
@@ -111,6 +120,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid var(--admin-border);
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .mapBackButton {
@@ -134,9 +144,9 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  flex: 1;
+  min-height: 0;
   box-sizing: border-box;
-  flex: none;
   display: grid;
   place-items: center;
   background:
@@ -179,11 +189,31 @@
 .panelCard {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.panelRoot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .panelBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 16px;
+  overflow: hidden;
+}
+
+.panelBodyScroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  padding: 16px;
 }
 
 .notice {
@@ -240,6 +270,7 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .filterRow {
@@ -476,6 +507,8 @@
 .tableWrap {
   border: 1px solid var(--admin-border);
   border-radius: 6px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -497,6 +530,9 @@
   color: var(--admin-muted);
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .rowInactive {
@@ -664,6 +700,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+  flex-shrink: 0;
 }
 
 .formGrid {
@@ -685,7 +722,8 @@
 .markerTabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 16px;
+  margin: 0 16px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--admin-border);
 }
 
@@ -1094,11 +1132,13 @@
 @media (max-width: 960px) {
   .body {
     grid-template-columns: 1fr;
+    overflow: auto;
   }
 
   .mapCard,
   .panelCard {
     min-height: 320px;
+    height: auto;
   }
 
   .cards {

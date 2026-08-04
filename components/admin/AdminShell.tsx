@@ -83,7 +83,7 @@ export function AdminShell() {
         <AdminMapPanel />
         <section className={styles.panelCard} aria-label="관리자 패널">
           {(error || message) && (
-            <div style={{ padding: "12px 16px 0" }}>
+            <div style={{ padding: "12px 16px 0", flexShrink: 0 }}>
               {error && (
                 <div className={`${styles.notice} ${styles.noticeError}`}>
                   {error}
@@ -112,7 +112,9 @@ export function AdminShell() {
               )}
             </div>
           )}
-          <PanelContent />
+          <div className={styles.panelRoot}>
+            <PanelContent />
+          </div>
         </section>
       </div>
 
