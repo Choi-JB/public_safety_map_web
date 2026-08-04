@@ -19,6 +19,7 @@ export type AdminSummary = {
   total_feedbacks: number;
   feedbacks_today: number;
   active_city_events: number;
+  inactive_city_events: number;
 };
 
 export type AdminReport = {
