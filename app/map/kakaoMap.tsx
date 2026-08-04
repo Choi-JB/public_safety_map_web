@@ -9,6 +9,8 @@ import type {
   InfraType,
   InfrastructureItem,
   ReportItem,
+  AccidentZoneType,
+  AccidentZonesData,
 } from "@/lib/api/types";
 
 import { loadKakaoMap } from "./loadkakaoMap";
@@ -22,6 +24,9 @@ const MAX_ZOOM_OUT = 9; // --> 최대 줌 아웃 레벨
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 const CENTER_EVENT_RADIUS_KM = 10; // 행사 패널 표시 반경
+const ACCIDENT_REGION_DEBOUNCE_MS = 2000; // 중심 고정 후 구 조회
+const ACCIDENT_HIDE_MIN_LEVEL = 7; // 이상이면 호출/표시 안 함
+
 
 // 마커 종류별 색상 정의
 const MARKER_COLORS = {
@@ -61,6 +66,47 @@ function infraLabel(type: string | null) {
     default:
       return undefined;
   }
+}
+
+/** 사고다발 타입별 폴리곤 색 */
+function accidentColor(type: AccidentZoneType) {
+  switch (type) {
+    case "pedestrian":
+      return "#dc2626";
+    case "bicycle":
+      return "#2563eb";
+    case "motorcycle":
+      return "#7c3aed";
+    case "schoolzone":
+      return "#ea580c";
+  }
+}
+
+/** 카카오 region code(10자리) → 공단 시군구 */
+function regionCodeToSiDoGuGun(code: string): { siDo: string; guGun: string } | null {
+  const digits = code.replace(/\D/g, "");
+  if (digits.length < 5) return null;
+  const siDo = digits.slice(0, 2);
+  // 공단이 zero-pad 필요하면: digits.slice(2, 5) 그대로
+  if (!/^\d{2}$/.test(siDo)) return null;
+  return { siDo, guGun: digits.slice(2, 5) }; // guGun 3자리 원형 권장 ("680")
+}
+
+function coordToSiDoGuGun(
+  kakao: any,
+  lat: number,
+  lng: number
+): Promise<{ siDo: string; guGun: string } | null> {
+  return new Promise((resolve) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.coord2RegionCode(lng, lat, (result: any[], status: string) => {
+      if (status !== kakao.maps.services.Status.OK || !result?.[0]?.code) {
+        resolve(null);
+        return;
+      }
+      resolve(regionCodeToSiDoGuGun(String(result[0].code)));
+    });
+  });
 }
 
 /** SVG 핀 → 카카오 MarkerImage (label 있으면 흰 원에 글자) */
@@ -110,6 +156,10 @@ export default function KakaoMap() {
   const hoverReqIdRef = useRef(0);
   const markersRef = useRef<any[]>([]);
   const infraCircleRef = useRef<any>(null);
+  //accident
+  const accidentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAccidentRegionRef = useRef<string | null>(null);
+  const accidentPolygonsRef = useRef<any[]>([]);
 
   const setBounds = useMapStore((s) => s.setBounds);
   const bounds = useMapStore((s) => s.bounds);
@@ -127,6 +177,10 @@ export default function KakaoMap() {
   const infraVisible = useMapStore((s) => s.infraVisible);
   const visibleInfraTypes = useMapStore((s) => s.visibleInfraTypes);
   const setInfrastructures = useMapStore((s) => s.setInfrastructures);
+  //accident
+  const accidentZonesVisible = useMapStore((s) => s.accidentZonesVisible);
+  const visibleAccidentTypes = useMapStore((s) => s.visibleAccidentTypes);
+  const setAccidentZones = useMapStore((s) => s.setAccidentZones);
 
   const setGridDetail = useMapStore((s) => s.setGridDetail);
   const setDetailLoading = useMapStore((s) => s.setDetailLoading);
@@ -686,6 +740,130 @@ export default function KakaoMap() {
     };
   }, [bounds, infraVisible, visibleInfraTypes, setInfrastructures]);
 
+    // 사고다발 폴리곤 — 지도 중앙 시군구 1곳
+      // 사고다발: 중심 2초 고정 후, 구가 바뀔 때만 호출
+  useEffect(() => {
+    const clearPolys = () => {
+      accidentPolygonsRef.current.forEach((p) => p.setMap(null));
+      accidentPolygonsRef.current = [];
+    };
+
+    const clearDebounce = () => {
+      if (accidentDebounceRef.current) {
+        clearTimeout(accidentDebounceRef.current);
+        accidentDebounceRef.current = null;
+      }
+    };
+    if (!mapRef.current || !kakaoRef.current) return;
+
+const level = mapRef.current.getLevel();
+
+if (level >= ACCIDENT_HIDE_MIN_LEVEL) {
+  clearDebounce();
+  clearPolys();
+  setAccidentZones([]);
+  lastAccidentRegionRef.current = null;
+  return;
+}
+
+
+    // OFF → 폴리곤·디바운스·구 키 초기화
+    if (!accidentZonesVisible) {
+      clearDebounce();
+      clearPolys();
+      setAccidentZones([]);
+      lastAccidentRegionRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    clearDebounce();
+    accidentDebounceRef.current = setTimeout(() => {
+      void (async () => {
+        try {
+          const kakao = kakaoRef.current;
+          const map = mapRef.current;
+          if (!kakao || !map || cancelled) return;
+
+          const center = map.getCenter();
+          const lat = center.getLat();
+          const lng = center.getLng();
+
+          const region = await coordToSiDoGuGun(kakao, lat, lng);
+          if (cancelled) return;
+          if (!region) {
+            console.warn("[accident-zones] region code 실패");
+            clearPolys();
+            setAccidentZones([]);
+            return;
+          }
+
+          const regionKey = `${region.siDo}|${region.guGun}`;
+
+          // 같은 구 → 재호출 안 함 (폴리곤 유지)
+          if (lastAccidentRegionRef.current === regionKey) {
+            return;
+          }
+
+          const q = new URLSearchParams({
+            siDo: region.siDo,
+            guGun: region.guGun,
+          });
+          const data = await get<AccidentZonesData>(`/accident-zones?${q}`);
+          if (cancelled) return;
+
+          const typeSet = new Set(visibleAccidentTypes);
+          let items = (data?.items ?? []).filter((it) => typeSet.has(it.type));
+
+          // 구 전체 보려면 아래 10km 필터 삭제 권장
+          items = items.filter(
+            (z) =>
+              z.lat != null &&
+              z.lng != null &&
+              distKm(lat, lng, z.lat, z.lng) <= CENTER_EVENT_RADIUS_KM
+          );
+
+          setAccidentZones(items);
+          clearPolys();
+
+          for (const z of items) {
+            if (!z.path || z.path.length < 3) continue;
+            const path = z.path.map(
+              (p) => new kakao.maps.LatLng(p.lat, p.lng)
+            );
+            const color = accidentColor(z.type);
+            const poly = new kakao.maps.Polygon({
+              map,
+              path,
+              strokeWeight: 2,
+              strokeColor: color,
+              strokeOpacity: 0.9,
+              fillColor: color,
+              fillOpacity: 0.25,
+              zIndex: 2,
+            });
+            accidentPolygonsRef.current.push(poly);
+          }
+
+          lastAccidentRegionRef.current = regionKey;
+        } catch (error) {
+          console.error("[accident-zones]", error);
+        }
+      })();
+    }, ACCIDENT_REGION_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearDebounce();
+    };
+  }, [
+    bounds,
+    accidentZonesVisible,
+    visibleAccidentTypes,
+    setAccidentZones,
+  ]);
+  
     // 4) 선택 격자 → 인포카드 detail (인프라 마커와 분리)
     useEffect(() => {
       if (!selectedGridId) {
