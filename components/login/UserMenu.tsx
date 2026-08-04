@@ -7,11 +7,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import styles from "./login.module.css";
+import { useMapStore } from "@/store/mapStore";
 
 export function UserMenu() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  const setSidePanelTab = useMapStore((s) => s.setSidePanelTab);
+  const setSidePanelOpen = useMapStore((s) => s.setSidePanelOpen);
 
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -85,7 +89,11 @@ export function UserMenu() {
             <button
               type="button"
               className={styles.userMenuAction}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setSidePanelTab("mypage");
+                setSidePanelOpen(true);
+              }}
             >
               내 제보
             </button>
