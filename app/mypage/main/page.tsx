@@ -167,7 +167,7 @@ export default function MyPageMain({
     setListLoading(true);
     setListError(null);
     try {
-      const items = await fetchMyPageReports(userId, nextPage, PAGE_SIZE);
+      const items = await fetchMyPageReports(nextPage, PAGE_SIZE);
       setReports((prev) => (append ? [...prev, ...items] : items));
       setPage(nextPage);
       setHasMore(items.length >= PAGE_SIZE);
@@ -190,7 +190,7 @@ export default function MyPageMain({
     setListLoading(true);
     setListError(null);
     try {
-      const items = await fetchMyPageFeedbacks(userId, nextPage, PAGE_SIZE);
+      const items = await fetchMyPageFeedbacks(nextPage, PAGE_SIZE);
       setFeedbacks((prev) => (append ? [...prev, ...items] : items));
       setPage(nextPage);
       setHasMore(items.length >= PAGE_SIZE);
