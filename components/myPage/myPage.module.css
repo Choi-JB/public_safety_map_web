@@ -5,7 +5,7 @@
   --mypage-muted: #8e8e8e;
   --mypage-line: #e5e5e5;
   --mypage-line-focus: #03c75a;
-  --mypage-green: #03c75a;
+  --mypage-green: #2f5d7c;
   --mypage-danger: #ff3b30;
   width: 100%;
   color: var(--mypage-text);
@@ -17,7 +17,7 @@
   --mypage-muted: #8e8e8e;
   --mypage-line: #e5e5e5;
   --mypage-line-focus: #03c75a;
-  --mypage-green: #03c75a;
+  --mypage-green: #2f5d7c;
   --mypage-danger: #ff3b30;
   min-height: 100vh;
   display: flex;
@@ -151,7 +151,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: #02b350;
+  background: #264a63;
 }
 
 .button:disabled {

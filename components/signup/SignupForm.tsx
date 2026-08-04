@@ -112,7 +112,7 @@ export function SignupForm() {
       <div className={styles.card}>
         <form className={styles.form} onSubmit={(e) => void handleSubmit(e)}>
           <div className={styles.field}>
-            <label htmlFor="signup-email">이메일</label>
+            <label htmlFor="signup-email">이메일 email</label>
             <div className={styles.inputRow}>
               <input
                 id="signup-email"

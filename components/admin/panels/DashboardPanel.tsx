@@ -29,7 +29,7 @@ export function DashboardPanel() {
     {
       label: "진행 중이거나 예정된 도시정보",
       value: summary?.active_city_events ?? "-",
-      today: undefined,
+      ended: summary?.inactive_city_events ?? "-",
     },
   ];
 
@@ -47,7 +47,9 @@ export function DashboardPanel() {
                 <div className={styles.statValue}>{card.value}</div>
                 {typeof card.today === "number" && (
                   <div className={styles.statToday}>오늘 +{card.today}</div>
-                )}
+                ) || (typeof card.ended === "number" && (
+                  <div className={styles.statToday}>종료 +{card.ended}</div>
+                ))}
               </article>
             ))}
           </div>
