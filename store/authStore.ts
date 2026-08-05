@@ -42,6 +42,7 @@ type AuthState = {
    * 로그아웃
    */
   logout: () => Promise<void>;
+
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -97,12 +98,12 @@ export const useAuthStore = create<AuthState>()(
        *  - 관리자: 세션 종료 destroy
        *  - 일반 유저: refresh token 폐기
        */
-      try{
+      try {
         await logoutApi();
       } catch (err) {
         console.error("[logout]", err);
       }
-      
+
       /**
        * 상태 초기화
        */
@@ -119,18 +120,18 @@ export const useAuthStore = create<AuthState>()(
       try {
         const me = await fetchAdminMe();
         set((prev) => ({
-          user: { 
-            id: Number(me.id), 
-            nickname: me.nickname ?? prev.user?.nickname ?? null, 
-            role: me.role, 
+          user: {
+            id: Number(me.id),
+            nickname: me.nickname ?? prev.user?.nickname ?? null,
+            role: me.role,
             email: me.email ?? prev.user?.email ?? null
-         },
+          },
           authType: "session",
           sessionId: "active",
         }));
         return true;
-      } catch(err) {
-        
+      } catch (err) {
+
         set({
           user: null,
           authType: null,
@@ -147,9 +148,21 @@ export const useAuthStore = create<AuthState>()(
   }), {
     name: "auth-storage",
     skipHydration: true,
-    partialize: (state) => ({
-      accessToken: state.accessToken,
-      user: state.user,
-      authType: state.authType,
-    }),
+    partialize: (state) => {
+      // 관리자 세션은 브라우저 종료 시 남지 않게
+      if (state.authType === "session") {
+        return {
+          accessToken: null,
+          user: null,
+          authType: null,
+        };
+      }
+      // 일반 유저 JWT만 유지
+      return {
+        accessToken: state.accessToken,
+        user: state.user,
+        authType: state.authType,
+      }
+
+    },
   }));
