@@ -11,6 +11,17 @@ const AuthReadyContext = createContext(false);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
+  const { authType } = useAuthStore.getState();
+
+  //브라우저 첫 시작 시 관리자 세션이 있으면 제거
+  if (authType === "session") {
+    useAuthStore.setState({
+      user: null,
+      authType: null,
+      sessionId: null,
+      accessToken: null,
+    });
+  }
 
   useEffect(() => {
     useAuthStore.persist.rehydrate();

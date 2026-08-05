@@ -56,13 +56,13 @@ export type ReportsListResult = {
 export type AdminFeedback = {
   id: string;
   user_id: string;
-  grid_id: string;
   safety_feeling: string;
   comment: string;
   img_url: string | null;
   is_active: "Y" | "N";
   created_at: string;
   user?: { nickname: string } | null;
+  grid?: { id: number; lat: number; lng: number } | null;
 };
 
 export type AdminCityEvent = {

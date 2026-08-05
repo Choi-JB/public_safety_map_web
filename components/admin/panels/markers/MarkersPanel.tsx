@@ -13,30 +13,29 @@ export function MarkersPanel() {
   const [tab, setTab] = useState<MarkerFormTab>("report");
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>마커 등록</div>
-      <div className={styles.panelBody}>
-        <div className={styles.markerTabs} role="tablist" aria-label="마커 등록 유형">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "report"}
-            className={`${styles.markerTab} ${tab === "report" ? styles.markerTabActive : ""}`}
-            onClick={() => setTab("report")}
-          >
-            제보
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "city-event"}
-            className={`${styles.markerTab} ${tab === "city-event" ? styles.markerTabActive : ""}`}
-            onClick={() => setTab("city-event")}
-          >
-            도시정보
-          </button>
-        </div>
-
+      <div className={styles.markerTabs} role="tablist" aria-label="마커 등록 유형">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "report"}
+          className={`${styles.markerTab} ${tab === "report" ? styles.markerTabActive : ""}`}
+          onClick={() => setTab("report")}
+        >
+          제보
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "city-event"}
+          className={`${styles.markerTab} ${tab === "city-event" ? styles.markerTabActive : ""}`}
+          onClick={() => setTab("city-event")}
+        >
+          도시정보
+        </button>
+      </div>
+      <div className={styles.panelBodyScroll}>
         {tab === "report" ? <ReportMarkerForm /> : <CityEventMarkerForm />}
       </div>
     </div>

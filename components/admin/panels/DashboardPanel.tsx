@@ -34,9 +34,9 @@ export function DashboardPanel() {
   ];
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>대시보드</div>
-      <div className={styles.panelBody}>
+      <div className={styles.panelBodyScroll}>
         {loading && !summary ? (
           <div className={styles.empty}>불러오는 중…</div>
         ) : (
