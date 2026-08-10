@@ -47,21 +47,24 @@ export function DatePresetChecks({
   return (
     <div className={styles.field}>
       <span className={styles.fieldLabel}>기간 프리셋</span>
-      <div className={styles.checkGroup} role="group" aria-label="기간 프리셋">
+      <div
+        className={styles.filterPillGroup}
+        role="group"
+        aria-label="기간 프리셋"
+      >
         {presets.map((preset) => {
-          const id = `${idPrefix}-preset-${preset.value}`;
+          const active = value === preset.value;
           return (
-            <label key={preset.value} className={styles.checkItem} htmlFor={id}>
-              <input
-                id={id}
-                type="checkbox"
-                checked={value === preset.value}
-                onChange={(e) => {
-                  onChange(e.target.checked ? preset.value : "");
-                }}
-              />
-              <span>{preset.label}</span>
-            </label>
+            <button
+              key={preset.value}
+              type="button"
+              id={`${idPrefix}-preset-${preset.value}`}
+              className={`${styles.filterPill} ${active ? styles.filterPillActive : ""}`}
+              aria-pressed={active}
+              onClick={() => onChange(active ? "" : preset.value)}
+            >
+              {preset.label}
+            </button>
           );
         })}
       </div>
@@ -83,21 +86,24 @@ export function ActiveFilterChecks({
   return (
     <div className={styles.field}>
       <span className={styles.fieldLabel}>활성여부</span>
-      <div className={styles.checkGroup} role="group" aria-label="활성여부">
+      <div
+        className={styles.filterPillGroup}
+        role="group"
+        aria-label="활성여부"
+      >
         {ACTIVE_OPTIONS.map((option) => {
-          const id = `${idPrefix}-active-${option.value}`;
+          const active = value === option.value;
           return (
-            <label key={option.value} className={styles.checkItem} htmlFor={id}>
-              <input
-                id={id}
-                type="checkbox"
-                checked={value === option.value}
-                onChange={(e) => {
-                  onChange(e.target.checked ? option.value : "all");
-                }}
-              />
-              <span>{option.label}</span>
-            </label>
+            <button
+              key={option.value}
+              type="button"
+              id={`${idPrefix}-active-${option.value}`}
+              className={`${styles.filterPill} ${active ? styles.filterPillActive : ""}`}
+              aria-pressed={active}
+              onClick={() => onChange(active ? "all" : option.value)}
+            >
+              {option.label}
+            </button>
           );
         })}
       </div>

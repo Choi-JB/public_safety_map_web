@@ -15,6 +15,7 @@ import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
 import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 import { getDateRangeFromYearMonth } from "@/store/adminStore";
@@ -70,6 +71,7 @@ export function CityEventsPanel() {
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
   const [now, setNow] = useState(() => Date.now());
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const fromYm = parseYearMonth(filters.date_from) ?? {
@@ -131,6 +133,20 @@ export function CityEventsPanel() {
               onChange={applyEventDatePreset}
               presets={EVENT_DATE_PRESETS}
             />
+            <div className={styles.filterPillGroup}>
+              <button
+                type="button"
+                className={styles.filterPill}
+                aria-pressed={showCustomRange}
+                onClick={() => setShowCustomRange((v) => !v)}
+              >
+                {showCustomRange ? "기간 직접 입력 닫기" : "기간 직접 입력"}
+              </button>
+            </div>
+          </div>
+
+          {showCustomRange && (
+            <div className={styles.filterRow}>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>기간 (년/월)</span>
               <div className={styles.yearMonthRange}>
@@ -205,7 +221,8 @@ export function CityEventsPanel() {
                 </select>
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
@@ -213,7 +230,10 @@ export function CityEventsPanel() {
               <select
                 id="event-type"
                 value={filters.type}
-                onChange={(e) => setEventFilters({ type: e.target.value })}
+                onChange={(e) => {
+                  setEventFilters({ type: e.target.value, page: 1 });
+                  void loadEvents();
+                }}
               >
                 <option value="">전체</option>
                 {eventTypes.map((type) => (
@@ -228,12 +248,13 @@ export function CityEventsPanel() {
               <select
                 id="event-status"
                 value={filters.status}
-                onChange={(e) =>
+                onChange={(e) => {
                   setEventFilters({
                     status: e.target.value as typeof filters.status,
                     page: 1,
-                  })
-                }
+                  });
+                  void loadEvents();
+                }}
               >
                 <option value="">전체</option>
                 <option value="scheduled">예정</option>
@@ -257,16 +278,6 @@ export function CityEventsPanel() {
                 void loadEvents();
               }}
             />
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
-                setEventFilters({ page: 1 });
-                void loadEvents();
-              }}
-            >
-              조회
-            </button>
             <button
               type="button"
               className={styles.iconButton}
@@ -295,10 +306,12 @@ export function CityEventsPanel() {
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? (
+              {loading && events.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={6} />
+              ) : events.length === 0 ? (
                 <tr>
                   <td colSpan={6} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "도시정보가 없습니다."}
+                    도시정보가 없습니다.
                   </td>
                 </tr>
               ) : (

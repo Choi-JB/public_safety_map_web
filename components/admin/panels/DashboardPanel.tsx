@@ -4,16 +4,47 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
+import { formatCreatedAt } from "../shared/formatDate";
+import { Skeleton, SkeletonTableRows } from "../shared/Skeleton";
 import styles from "../admin.module.css";
+
+type RecentItem = {
+  kind: "report" | "feedback";
+  id: string;
+  label: string;
+  nickname: string;
+  created_at: string;
+};
 
 export function DashboardPanel() {
   const summary = useAdminStore((s) => s.summary);
   const loading = useAdminStore((s) => s.loading);
   const loadSummary = useAdminStore((s) => s.loadSummary);
+  const recentReports = useAdminStore((s) => s.recentReports);
+  const recentFeedbacks = useAdminStore((s) => s.recentFeedbacks);
+  const loadRecentActivity = useAdminStore((s) => s.loadRecentActivity);
 
   useEffect(() => {
     void loadSummary();
-  }, [loadSummary]);
+    void loadRecentActivity();
+  }, [loadSummary, loadRecentActivity]);
+
+  const recentItems: RecentItem[] = [
+    ...recentReports.map((r) => ({
+      kind: "report" as const,
+      id: r.id,
+      label: `[${r.type}] ${r.description}`,
+      nickname: r.user?.nickname?.trim() || "-",
+      created_at: r.created_at,
+    })),
+    ...recentFeedbacks.map((f) => ({
+      kind: "feedback" as const,
+      id: f.id,
+      label: f.comment || "-",
+      nickname: f.user?.nickname?.trim() || "-",
+      created_at: f.created_at,
+    })),
+  ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
   const cards = [
     {
@@ -37,23 +68,66 @@ export function DashboardPanel() {
     <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>대시보드</div>
       <div className={styles.panelBodyScroll}>
-        {loading && !summary ? (
-          <div className={styles.empty}>불러오는 중…</div>
-        ) : (
-          <div className={styles.cards}>
-            {cards.map((card) => (
-              <article key={card.label} className={styles.statCard}>
-                <div className={styles.statLabel}>{card.label}</div>
-                <div className={styles.statValue}>{card.value}</div>
-                {typeof card.today === "number" && (
-                  <div className={styles.statToday}>오늘 +{card.today}</div>
-                ) || (typeof card.ended === "number" && (
-                  <div className={styles.statToday}>종료 +{card.ended}</div>
-                ))}
-              </article>
-            ))}
-          </div>
-        )}
+        <div className={styles.cards}>
+          {loading && !summary
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <article key={i} className={styles.statCard}>
+                  <Skeleton height={13} width="50%" />
+                  <div style={{ marginTop: 10 }}>
+                    <Skeleton height={32} width="70%" />
+                  </div>
+                </article>
+              ))
+            : cards.map((card) => (
+                <article key={card.label} className={styles.statCard}>
+                  <div className={styles.statLabel}>{card.label}</div>
+                  <div className={styles.statValue}>{card.value}</div>
+                  {typeof card.today === "number" && (
+                    <div className={styles.statToday}>오늘 +{card.today}</div>
+                  ) || (typeof card.ended === "number" && (
+                    <div className={styles.statToday}>종료 +{card.ended}</div>
+                  ))}
+                </article>
+              ))}
+        </div>
+
+        <div className={styles.panelHeader} style={{ marginTop: 16 }}>
+          최근 활동
+        </div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>구분</th>
+                <th>내용</th>
+                <th>작성자</th>
+                <th>등록일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && recentItems.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={4} />
+              ) : recentItems.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className={styles.empty}>
+                    최근 활동이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                recentItems.map((item) => (
+                  <tr key={`${item.kind}-${item.id}`}>
+                    <td>{item.kind === "report" ? "제보" : "피드백"}</td>
+                    <td>{item.label}</td>
+                    <td>{item.nickname}</td>
+                    <td className={styles.dateCell}>
+                      {formatCreatedAt(item.created_at)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

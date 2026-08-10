@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
 import { AuthorNicknameMenu } from "../shared/AuthorNicknameMenu";
@@ -13,6 +13,7 @@ import { RefreshIcon } from "../shared/RefreshIcon";
 import { SafetyBadge } from "../shared/SafetyBadge";
 import { DateInput } from "../shared/ScheduleRow";
 import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -38,6 +39,7 @@ export function FeedbacksPanel() {
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   useEffect(() => {
     void loadFeedbacks();
@@ -54,23 +56,38 @@ export function FeedbacksPanel() {
               value={filters.date_preset}
               onChange={applyFeedbackDatePreset}
             />
-            <DateInput
-              id="fb-from"
-              label="등록일"
-              value={filters.date_from}
-              onChange={(date) =>
-                setFeedbackFilters({ date_from: date, date_preset: "" })
-              }
-            />
-            <DateInput
-              id="fb-to"
-              label=""
-              value={filters.date_to}
-              onChange={(date) =>
-                setFeedbackFilters({ date_to: date, date_preset: "" })
-              }
-            />
+            <div className={styles.filterPillGroup}>
+              <button
+                type="button"
+                className={styles.filterPill}
+                aria-pressed={showCustomRange}
+                onClick={() => setShowCustomRange((v) => !v)}
+              >
+                {showCustomRange ? "기간 직접 입력 닫기" : "기간 직접 입력"}
+              </button>
+            </div>
           </div>
+
+          {showCustomRange && (
+            <div className={styles.filterRow}>
+              <DateInput
+                id="fb-from"
+                label="등록일"
+                value={filters.date_from}
+                onChange={(date) =>
+                  setFeedbackFilters({ date_from: date, date_preset: "" })
+                }
+              />
+              <DateInput
+                id="fb-to"
+                label=""
+                value={filters.date_to}
+                onChange={(date) =>
+                  setFeedbackFilters({ date_to: date, date_preset: "" })
+                }
+              />
+            </div>
+          )}
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
@@ -78,9 +95,13 @@ export function FeedbacksPanel() {
               <select
                 id="fb-feeling"
                 value={filters.safety_feeling}
-                onChange={(e) =>
-                  setFeedbackFilters({ safety_feeling: e.target.value })
-                }
+                onChange={(e) => {
+                  setFeedbackFilters({
+                    safety_feeling: e.target.value,
+                    page: 1,
+                  });
+                  void loadFeedbacks();
+                }}
               >
                 <option value="">전체</option>
                 {safetyFeelings.map((feeling) => (
@@ -112,16 +133,6 @@ export function FeedbacksPanel() {
             />
             <button
               type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
-                setFeedbackFilters({ page: 1 });
-                void loadFeedbacks();
-              }}
-            >
-              조회
-            </button>
-            <button
-              type="button"
               className={styles.iconButton}
               title="필터 초기화"
               aria-label="필터 초기화"
@@ -149,10 +160,12 @@ export function FeedbacksPanel() {
               </tr>
             </thead>
             <tbody>
-              {feedbacks.length === 0 ? (
+              {loading && feedbacks.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={7} />
+              ) : feedbacks.length === 0 ? (
                 <tr>
                   <td colSpan={7} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "피드백이 없습니다."}
+                    피드백이 없습니다.
                   </td>
                 </tr>
               ) : (

@@ -164,6 +164,8 @@ type AdminState = {
   reportTypes: string[];
   feedbacks: AdminFeedback[];
   feedbackSafetyFeelings: string[];
+  recentReports: AdminReport[];
+  recentFeedbacks: AdminFeedback[];
   events: AdminCityEvent[];
   eventTypes: string[];
   reportFilters: ReportFilters;
@@ -202,6 +204,7 @@ type AdminState = {
   loadSummary: () => Promise<void>;
   loadReports: () => Promise<void>;
   loadFeedbacks: () => Promise<void>;
+  loadRecentActivity: () => Promise<void>;
   loadEvents: () => Promise<void>;
   confirmDelete: () => Promise<void>;
   confirmRestore: () => Promise<void>;
@@ -258,6 +261,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   reportTypes: [],
   feedbacks: [],
   feedbackSafetyFeelings: [],
+  recentReports: [],
+  recentFeedbacks: [],
   events: [],
   eventTypes: [],
   reportFilters: defaultReportFilters,
@@ -479,6 +484,18 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         loading: false,
         error: e instanceof Error ? e.message : "피드백 목록 조회 실패",
       });
+    }
+  },
+
+  loadRecentActivity: async () => {
+    try {
+      const [{ reports }, feedbacks] = await Promise.all([
+        fetchReports({ page: 1, limit: 5, filter: "active" }),
+        fetchFeedbacks({ page: 1, limit: 5, filter: "active" }),
+      ]);
+      set({ recentReports: reports, recentFeedbacks: feedbacks });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : "최근 활동 조회 실패" });
     }
   },
 

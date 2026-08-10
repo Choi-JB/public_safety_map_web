@@ -46,7 +46,11 @@ export function AdminShell() {
   const error = useAdminStore((s) => s.error);
   const message = useAdminStore((s) => s.message);
   const clearNotice = useAdminStore((s) => s.clearNotice);
+  const tab = useAdminStore((s) => s.tab);
   const router = useRouter();
+
+  // 마커 등록 탭만 지도를 넓게, 나머지 탭은 지도를 조작 안 하니 좁게
+  const isMarkersTab = tab === "markers";
 
   useEffect(() => {
     return () => {
@@ -79,7 +83,7 @@ export function AdminShell() {
   return (
     <div className={styles.shell}>
       <AdminTopbar />
-      <div className={styles.body}>
+      <div className={`${styles.body} ${isMarkersTab ? "" : styles.bodyCompactMap}`}>
         <AdminMapPanel />
         <section className={styles.panelCard} aria-label="관리자 패널">
           {(error || message) && (

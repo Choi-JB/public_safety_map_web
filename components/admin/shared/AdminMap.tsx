@@ -11,12 +11,12 @@ const MAX_ZOOM_OUT = 7; // --> 최대 줌 아웃 레벨
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
 // 마커 종류별 색상 정의
-const MARKER_COLORS = {
-    me: "#2563eb", // 내위치 — 파란
-    report: "#dc2626", // report — 붉은
-    infra: "#16a34a", // infra 기본 — 녹색
-    event: "#ec4899", // 행사 — 분홍
-} as const;
+// const MARKER_COLORS = {
+//     me: "#2563eb", // 내위치 — 파란
+//     report: "#dc2626", // report — 붉은
+//     infra: "#16a34a", // infra 기본 — 녹색
+//     event: "#ec4899", // 행사 — 분홍
+// } as const;
 
 
 
