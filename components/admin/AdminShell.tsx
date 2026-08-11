@@ -1,7 +1,7 @@
 // 담당: 피드백/관리자팀
 
 "use client";
-
+import { AdminChatPanel } from "./panels/AdminChatPanel";
 import { useAdminStore } from "@/store/adminStore";
 import { AdminMapPanel } from "./layout/AdminMapPanel";
 import { AdminTopbar } from "./layout/AdminTopbar";
@@ -35,6 +35,8 @@ function PanelContent() {
       return <MarkersPanel />;
     case "city-events":
       return <CityEventsPanel />;
+    case "chat":
+      return <AdminChatPanel />;
     case "settings":
       return <SettingPanel />;
     default:
