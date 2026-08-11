@@ -111,7 +111,9 @@ export function DashboardPanel() {
               ))}
         </div>
 
-        {summary && (
+        {summary && 
+         Array.isArray(summary.five_days_reports_count) &&
+         summary.five_days_reports_count.length > 0 && (
           <>
             <div className={styles.panelHeader} style={{ marginTop: 16 }}>
               [최근 5일] 신규 제보 / 피드백 추이

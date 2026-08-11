@@ -27,6 +27,16 @@ function formatDateLabel(value: string) {
 }
 
 export function DailyTrendChart({ reportsDaily, feedbacksDaily }: Props) {
+  const reports = Array.isArray(reportsDaily) ? reportsDaily : [];
+  const feedbacks = Array.isArray(feedbacksDaily) ? feedbacksDaily : [];
+  if (reports.length === 0 && feedbacks.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: "#6b7785" }}>
+        추이 데이터를 불러올 수 없습니다.
+      </div>
+    );
+  }
+  
   const data = reportsDaily.map((r, i) => ({
     date: formatDateLabel(r.date),
     제보: Number(r.count),
