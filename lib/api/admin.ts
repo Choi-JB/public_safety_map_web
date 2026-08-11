@@ -13,6 +13,11 @@ export type AdminTab =
 
 export type ActiveFilter = "active" | "inactive" | "all";
 
+export type DailyCount = {
+  date: string;
+  count: string | number;
+};
+
 export type AdminSummary = {
   active_reports: number;
   reports_today: number;
@@ -20,6 +25,8 @@ export type AdminSummary = {
   feedbacks_today: number;
   active_city_events: number;
   inactive_city_events: number;
+  five_days_reports_count: DailyCount[];
+  five_days_feedbacks_count: DailyCount[];
 };
 
 export type AdminReport = {
@@ -37,6 +44,7 @@ export type AdminReport = {
   user?: { nickname: string } | null;
 };
 
+
 export type DatePreset =
   | ""
   | "today"
@@ -51,6 +59,7 @@ export type DatePreset =
 export type ReportsListResult = {
   reports: AdminReport[];
   types: string[];
+  total:number;
 };
 
 export type AdminFeedback = {
@@ -63,6 +72,11 @@ export type AdminFeedback = {
   created_at: string;
   user?: { nickname: string } | null;
   grid?: { id: number; lat: number; lng: number } | null;
+};
+
+export type FeedbacksListResult = {
+  feedbacks: AdminFeedback[];
+  total:number;
 };
 
 export type AdminCityEvent = {
@@ -85,6 +99,7 @@ export type AdminCityEvent = {
 export type EventsListResult = {
   events: AdminCityEvent[];
   types: string[];
+  total:number;
 };
 
 export type CreateEventPayload = {
@@ -285,11 +300,6 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
     keyword: query.keyword,
   });
 
-  /**
-   * 신고 목록 조회
-   * @param qs 쿼리 문자열
-   * @returns 신고 목록 (JSON 파싱 결과)
-   */
   const res = await fetch(`${getBaseUrl()}/admin/reports${qs}`, {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -313,6 +323,7 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
   return {
     reports: "data" in json ? (json.data ?? []) : [],
     types: "types" in json && Array.isArray(json.types) ? json.types : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
   };
 }
 
@@ -344,7 +355,7 @@ export async function restoreReport(id: number) {
  * @param query 조회 조건
  * @returns 피드백 목록 (JSON 파싱 결과)
  */
-export async function fetchFeedbacks(query: ListQuery) {
+export async function fetchFeedbacks(query: ListQuery): Promise<FeedbacksListResult> {
   const qs = buildQuery({
     page: query.page,
     limit: query.limit,
@@ -355,9 +366,29 @@ export async function fetchFeedbacks(query: ListQuery) {
     nickname: query.nickname,
     keyword: query.keyword,
   });
-  return request<AdminFeedback[]>(`/admin/feedbacks${qs}`);
+  const res = await fetch(`${getBaseUrl()}/admin/feedbacks${qs}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  let json: ApiResponse<AdminFeedback[]> & { types?: string[] };
+  try {
+    json = (await res.json()) as ApiResponse<AdminFeedback[]> & { types?: string[] };
+  } catch {
+    throw new Error("서버 응답을 파싱하지 못했습니다.");
+  }
+  if (!res.ok || json.success === false) {
+    throw new Error(
+      "message" in json && json.message
+        ? json.message
+        : `요청 실패 (${res.status})`,
+    );
+  }
+  return {
+    feedbacks: "data" in json ? (json.data ?? []) : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
+  };
 }
-
+  
 /**
  * 피드백 삭제
  * @param id 피드백 ID
@@ -419,6 +450,7 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
     types: Array.isArray(json.types)
       ? json.types.filter((t): t is string => typeof t === "string" && Boolean(t))
       : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
   };
 }
 

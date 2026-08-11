@@ -35,6 +35,7 @@ export function FeedbacksPanel() {
   );
   const resetFeedbackFilters = useAdminStore((s) => s.resetFeedbackFilters);
   const loadFeedbacks = useAdminStore((s) => s.loadFeedbacks);
+  const feedbackTotal = useAdminStore((s) => s.feedbackTotal);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
@@ -55,39 +56,38 @@ export function FeedbacksPanel() {
               idPrefix="fb"
               value={filters.date_preset}
               onChange={applyFeedbackDatePreset}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
-            <div className={styles.filterPillGroup}>
-              <button
-                type="button"
-                className={styles.filterPill}
-                aria-pressed={showCustomRange}
-                onClick={() => setShowCustomRange((v) => !v)}
-              >
-                {showCustomRange ? "기간 직접 입력 닫기" : "기간 직접 입력"}
-              </button>
-            </div>
+            {showCustomRange && (
+              <>
+                <DateInput
+                  id="fb-from"
+                  label="등록일"
+                  value={filters.date_from}
+                  onChange={(date) =>
+                    setFeedbackFilters({ date_from: date, date_preset: "" })
+                  }
+                />
+                <DateInput
+                  id="fb-to"
+                  label=""
+                  value={filters.date_to}
+                  onChange={(date) =>
+                    setFeedbackFilters({ date_to: date, date_preset: "" })
+                  }
+                />
+              </>
+            )}
           </div>
-
-          {showCustomRange && (
-            <div className={styles.filterRow}>
-              <DateInput
-                id="fb-from"
-                label="등록일"
-                value={filters.date_from}
-                onChange={(date) =>
-                  setFeedbackFilters({ date_from: date, date_preset: "" })
-                }
-              />
-              <DateInput
-                id="fb-to"
-                label=""
-                value={filters.date_to}
-                onChange={(date) =>
-                  setFeedbackFilters({ date_to: date, date_preset: "" })
-                }
-              />
-            </div>
-          )}
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
@@ -146,6 +146,9 @@ export function FeedbacksPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {feedbackTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>

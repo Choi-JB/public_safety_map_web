@@ -1,5 +1,6 @@
 // 담당: 피드백/관리자팀
 
+import type { ReactNode } from "react";
 import type { ActiveFilter, DatePreset } from "@/lib/api/admin";
 import styles from "../admin.module.css";
 
@@ -36,6 +37,8 @@ type DatePresetChecksProps = {
   onChange: (preset: DatePreset) => void;
   idPrefix: string;
   presets?: { value: Exclude<DatePreset, "">; label: string }[];
+  /** 프리셋 pill들과 같은 그룹에 이어 붙일 버튼(예: "직접 입력") */
+  trailing?: ReactNode;
 };
 
 export function DatePresetChecks({
@@ -43,6 +46,7 @@ export function DatePresetChecks({
   onChange,
   idPrefix,
   presets = DATE_PRESETS,
+  trailing,
 }: DatePresetChecksProps) {
   return (
     <div className={styles.field}>
@@ -67,6 +71,7 @@ export function DatePresetChecks({
             </button>
           );
         })}
+        {trailing}
       </div>
     </div>
   );

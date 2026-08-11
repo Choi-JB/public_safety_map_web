@@ -162,12 +162,15 @@ type AdminState = {
   summary: AdminSummary | null;
   reports: AdminReport[];
   reportTypes: string[];
+  reportsTotal: number;
   feedbacks: AdminFeedback[];
   feedbackSafetyFeelings: string[];
+  feedbackTotal: number;
   recentReports: AdminReport[];
   recentFeedbacks: AdminFeedback[];
   events: AdminCityEvent[];
   eventTypes: string[];
+  eventTotal: number;
   reportFilters: ReportFilters;
   feedbackFilters: FeedbackFilters;
   eventFilters: EventFilters;
@@ -259,12 +262,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   summary: null,
   reports: [],
   reportTypes: [],
+  reportsTotal: 0,
   feedbacks: [],
   feedbackSafetyFeelings: [],
+  feedbackTotal: 0,
   recentReports: [],
   recentFeedbacks: [],
   events: [],
   eventTypes: [],
+  eventTotal: 0,
   reportFilters: defaultReportFilters,
   feedbackFilters: defaultFeedbackFilters,
   eventFilters: defaultEventFilters,
@@ -418,7 +424,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         reportFilters.search_mode,
         reportFilters.search_query,
       );
-      const { reports, types } = await fetchReports({
+      const { reports, types, total } = await fetchReports({
         page: reportFilters.page,
         limit: reportFilters.limit,
         filter: reportFilters.filter,
@@ -432,6 +438,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         reports: filtered,
         reportTypes: sortTypesWithEtcLast(types),
+        reportsTotal: total,
         loading: false,
       });
     } catch (e) {
@@ -450,7 +457,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         feedbackFilters.search_mode,
         feedbackFilters.search_query,
       );
-      const feedbacks = await fetchFeedbacks({
+      const { feedbacks, total } = await fetchFeedbacks({
         page: feedbackFilters.page,
         limit: feedbackFilters.limit,
         filter: feedbackFilters.filter,
@@ -477,6 +484,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         feedbacks: filtered,
         feedbackSafetyFeelings: nextFeelings,
+        feedbackTotal: total,
         loading: false,
       });
     } catch (e) {
@@ -489,7 +497,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   loadRecentActivity: async () => {
     try {
-      const [{ reports }, feedbacks] = await Promise.all([
+      const [{ reports }, {feedbacks}] = await Promise.all([
         fetchReports({ page: 1, limit: 5, filter: "active" }),
         fetchFeedbacks({ page: 1, limit: 5, filter: "active" }),
       ]);
@@ -504,7 +512,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const keyword = eventFilters.keyword.trim() || undefined;
-      const { events, types } = await fetchEvents({
+      const { events, types, total } = await fetchEvents({
         page: eventFilters.page,
         limit: eventFilters.limit,
         filter: eventFilters.filter,
@@ -520,6 +528,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         events: filtered,
         eventTypes: types,
+        eventTotal: total,
         selectedEvent: selectedId
           ? (filtered.find((e) => e.id === selectedId) ??
             events.find((e) => e.id === selectedId) ??

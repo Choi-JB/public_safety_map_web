@@ -4,7 +4,11 @@
 
 import { useEffect } from "react";
 import { useAdminStore } from "@/store/adminStore";
+import { DailyTrendChart } from "../shared/DailyTrendChart";
+import { EventIcon } from "../shared/EventIcon";
+import { FeedbackIcon } from "../shared/FeedbackIcon";
 import { formatCreatedAt } from "../shared/formatDate";
+import { ReportIcon } from "../shared/ReportIcon";
 import { Skeleton, SkeletonTableRows } from "../shared/Skeleton";
 import styles from "../admin.module.css";
 
@@ -51,16 +55,22 @@ export function DashboardPanel() {
       label: "활성 제보",
       value: summary?.active_reports ?? "-",
       today: summary?.reports_today,
+      icon: <ReportIcon size={18} />,
+      iconClass: styles.statIconBlue,
     },
     {
       label: "누적 피드백",
       value: summary?.total_feedbacks ?? "-",
       today: summary?.feedbacks_today,
+      icon: <FeedbackIcon size={18} />,
+      iconClass: styles.statIconGreen,
     },
     {
       label: "진행 중이거나 예정된 도시정보",
       value: summary?.active_city_events ?? "-",
       ended: summary?.inactive_city_events ?? "-",
+      icon: <EventIcon size={18} />,
+      iconClass: styles.statIconAmber,
     },
   ];
 
@@ -72,7 +82,10 @@ export function DashboardPanel() {
           {loading && !summary
             ? Array.from({ length: 3 }).map((_, i) => (
                 <article key={i} className={styles.statCard}>
-                  <Skeleton height={13} width="50%" />
+                  <div className={styles.statCardHeader}>
+                    <Skeleton height={13} width="50%" />
+                    <Skeleton height={36} width={36} />
+                  </div>
                   <div style={{ marginTop: 10 }}>
                     <Skeleton height={32} width="70%" />
                   </div>
@@ -80,7 +93,14 @@ export function DashboardPanel() {
               ))
             : cards.map((card) => (
                 <article key={card.label} className={styles.statCard}>
-                  <div className={styles.statLabel}>{card.label}</div>
+                  <div className={styles.statCardHeader}>
+                    <div className={styles.statLabel}>{card.label}</div>
+                    <span
+                      className={`${styles.statIconBadge} ${card.iconClass}`}
+                    >
+                      {card.icon}
+                    </span>
+                  </div>
                   <div className={styles.statValue}>{card.value}</div>
                   {typeof card.today === "number" && (
                     <div className={styles.statToday}>오늘 +{card.today}</div>
@@ -90,6 +110,20 @@ export function DashboardPanel() {
                 </article>
               ))}
         </div>
+
+        {summary && (
+          <>
+            <div className={styles.panelHeader} style={{ marginTop: 16 }}>
+              [최근 5일] 신규 제보 / 피드백 추이
+            </div>
+            <div className={styles.statCard}>
+              <DailyTrendChart
+                reportsDaily={summary.five_days_reports_count}
+                feedbacksDaily={summary.five_days_feedbacks_count}
+              />
+            </div>
+          </>
+        )}
 
         <div className={styles.panelHeader} style={{ marginTop: 16 }}>
           최근 활동

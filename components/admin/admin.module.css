@@ -269,6 +269,37 @@
   box-shadow: var(--admin-shadow);
 }
 
+.statCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.statIconBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.statIconBlue {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+}
+
+.statIconGreen {
+  background: rgba(47, 107, 79, 0.12);
+  color: var(--admin-ok);
+}
+
+.statIconAmber {
+  background: rgba(138, 106, 47, 0.12);
+  color: var(--admin-warn);
+}
+
 .statLabel {
   color: var(--admin-muted);
   margin-bottom: 8px;

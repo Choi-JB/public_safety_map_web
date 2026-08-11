@@ -58,6 +58,7 @@ function parseYearMonth(value: string) {
 export function CityEventsPanel() {
   const events = useAdminStore((s) => s.events);
   const eventTypes = useAdminStore((s) => s.eventTypes);
+  const eventTotal = useAdminStore((s) => s.eventTotal);
   const filters = useAdminStore((s) => s.eventFilters);
   const loading = useAdminStore((s) => s.loading);
   const setEventFilters = useAdminStore((s) => s.setEventFilters);
@@ -132,21 +133,18 @@ export function CityEventsPanel() {
               value={filters.date_preset}
               onChange={applyEventDatePreset}
               presets={EVENT_DATE_PRESETS}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
-            <div className={styles.filterPillGroup}>
-              <button
-                type="button"
-                className={styles.filterPill}
-                aria-pressed={showCustomRange}
-                onClick={() => setShowCustomRange((v) => !v)}
-              >
-                {showCustomRange ? "기간 직접 입력 닫기" : "기간 직접 입력"}
-              </button>
-            </div>
-          </div>
-
-          {showCustomRange && (
-            <div className={styles.filterRow}>
+            {showCustomRange && (
             <div className={styles.field}>
               <span className={styles.fieldLabel}>기간 (년/월)</span>
               <div className={styles.yearMonthRange}>
@@ -221,8 +219,8 @@ export function CityEventsPanel() {
                 </select>
               </div>
             </div>
-            </div>
           )}
+          </div>
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
@@ -293,6 +291,9 @@ export function CityEventsPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {eventTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>

@@ -33,6 +33,7 @@ export function ReportsPanel() {
   const applyReportDatePreset = useAdminStore((s) => s.applyReportDatePreset);
   const resetReportFilters = useAdminStore((s) => s.resetReportFilters);
   const loadReports = useAdminStore((s) => s.loadReports);
+  const reportsTotal = useAdminStore((s) => s.reportsTotal);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const openRestoreConfirm = useAdminStore((s) => s.openRestoreConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
@@ -58,40 +59,39 @@ export function ReportsPanel() {
               value={filters.date_preset}
               onChange={applyReportDatePreset}
               presets={REPORT_DATE_PRESETS}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
-            <div className={styles.filterPillGroup}>
-              <button
-                type="button"
-                className={styles.filterPill}
-                aria-pressed={showCustomRange}
-                onClick={() => setShowCustomRange((v) => !v)}
-              >
-                {showCustomRange ? "기간 직접 입력 닫기" : "기간 직접 입력"}
-              </button>
-            </div>
+            {showCustomRange && (
+              <>
+                <DateInput
+                  id="report-from"
+                  label="등록일"
+                  value={filters.date_from}
+                  onChange={(date) =>
+                    setReportFilters({ date_from: date, date_preset: "" })
+                  }
+                />
+
+                <DateInput
+                  id="report-to"
+                  label=""
+                  value={filters.date_to}
+                  onChange={(date) =>
+                    setReportFilters({ date_to: date, date_preset: "" })
+                  }
+                />
+              </>
+            )}
           </div>
-
-          {showCustomRange && (
-            <div className={styles.filterRow}>
-              <DateInput
-                id="report-from"
-                label="등록일"
-                value={filters.date_from}
-                onChange={(date) =>
-                  setReportFilters({ date_from: date, date_preset: "" })
-                }
-              />
-
-              <DateInput
-                id="report-to"
-                label=""
-                value={filters.date_to}
-                onChange={(date) =>
-                  setReportFilters({ date_to: date, date_preset: "" })
-                }
-              />
-            </div>
-          )}
 
           <div className={styles.filterRow}>
             <div className={styles.field}>
@@ -145,6 +145,9 @@ export function ReportsPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {reportsTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
