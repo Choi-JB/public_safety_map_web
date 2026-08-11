@@ -15,7 +15,7 @@ export function AdminMapPanel() {
 
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const tab = useAdminStore((s) => s.tab);
-  
+
   const backToMap = () => {
     setMapFocus(null);
     router.push("/map");

@@ -15,6 +15,7 @@ import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
 import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 import { getDateRangeFromYearMonth } from "@/store/adminStore";
@@ -57,6 +58,7 @@ function parseYearMonth(value: string) {
 export function CityEventsPanel() {
   const events = useAdminStore((s) => s.events);
   const eventTypes = useAdminStore((s) => s.eventTypes);
+  const eventTotal = useAdminStore((s) => s.eventTotal);
   const filters = useAdminStore((s) => s.eventFilters);
   const loading = useAdminStore((s) => s.loading);
   const setEventFilters = useAdminStore((s) => s.setEventFilters);
@@ -70,6 +72,7 @@ export function CityEventsPanel() {
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
   const [now, setNow] = useState(() => Date.now());
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const fromYm = parseYearMonth(filters.date_from) ?? {
@@ -130,7 +133,18 @@ export function CityEventsPanel() {
               value={filters.date_preset}
               onChange={applyEventDatePreset}
               presets={EVENT_DATE_PRESETS}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
+            {showCustomRange && (
             <div className={styles.field}>
               <span className={styles.fieldLabel}>기간 (년/월)</span>
               <div className={styles.yearMonthRange}>
@@ -205,6 +219,7 @@ export function CityEventsPanel() {
                 </select>
               </div>
             </div>
+          )}
           </div>
 
           <div className={styles.filterRow}>
@@ -213,7 +228,10 @@ export function CityEventsPanel() {
               <select
                 id="event-type"
                 value={filters.type}
-                onChange={(e) => setEventFilters({ type: e.target.value })}
+                onChange={(e) => {
+                  setEventFilters({ type: e.target.value, page: 1 });
+                  void loadEvents();
+                }}
               >
                 <option value="">전체</option>
                 {eventTypes.map((type) => (
@@ -228,12 +246,13 @@ export function CityEventsPanel() {
               <select
                 id="event-status"
                 value={filters.status}
-                onChange={(e) =>
+                onChange={(e) => {
                   setEventFilters({
                     status: e.target.value as typeof filters.status,
                     page: 1,
-                  })
-                }
+                  });
+                  void loadEvents();
+                }}
               >
                 <option value="">전체</option>
                 <option value="scheduled">예정</option>
@@ -259,16 +278,6 @@ export function CityEventsPanel() {
             />
             <button
               type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
-                setEventFilters({ page: 1 });
-                void loadEvents();
-              }}
-            >
-              조회
-            </button>
-            <button
-              type="button"
               className={styles.iconButton}
               title="필터 초기화"
               aria-label="필터 초기화"
@@ -282,6 +291,9 @@ export function CityEventsPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {eventTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -295,10 +307,12 @@ export function CityEventsPanel() {
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? (
+              {loading && events.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={6} />
+              ) : events.length === 0 ? (
                 <tr>
                   <td colSpan={6} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "도시정보가 없습니다."}
+                    도시정보가 없습니다.
                   </td>
                 </tr>
               ) : (

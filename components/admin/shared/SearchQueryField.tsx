@@ -1,6 +1,7 @@
 // 담당: 피드백/관리자팀
 
 import type { KeyboardEvent } from "react";
+import { SearchIcon } from "./SearchIcon";
 import styles from "../admin.module.css";
 
 export type SearchMode = "user" | "keyword";
@@ -51,14 +52,26 @@ export function SearchQueryField({
             <option value="keyword">키워드</option>
           </select>
         )}
-        <input
-          id={inputId}
-          type="text"
-          value={query}
-          placeholder={placeholder}
-          onChange={(e) => onQueryChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
+        <div className={styles.iconInput}>
+          <button
+            type="button"
+            className={styles.iconInputBtn}
+            title="검색"
+            aria-label="검색"
+            onClick={() => onSubmit?.()}
+          >
+            <SearchIcon size={14} />
+          </button>
+          <input
+            id={inputId}
+            type="text"
+            className={styles.iconInputField}
+            value={query}
+            placeholder={placeholder}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+        </div>
       </div>
     </div>
   );
