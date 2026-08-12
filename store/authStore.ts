@@ -130,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
           sessionId: "active",
         }));
         return true;
-      } catch (err) {
+      } catch {
         const {authType, accessToken} = get();
         if(authType === "jwt" && accessToken) {
           return false;
@@ -140,10 +140,7 @@ export const useAuthStore = create<AuthState>()(
           authType: null,
           sessionId: null,
           accessToken: null,
-          error:
-            err instanceof Error
-              ? err.message
-              : "세션이 만료되었습니다. 다시 로그인해주세요.",
+          error: "세션이 만료되었습니다. 다시 로그인해주세요.",
         });
         return false;
       }
@@ -156,8 +153,8 @@ export const useAuthStore = create<AuthState>()(
       if (state.authType === "session") {
         return {
           accessToken: null,
-          user: null,
-          authType: null,
+          user: state.user,
+          authType: state.authType,
         };
       }
       // 일반 유저 JWT만 유지
