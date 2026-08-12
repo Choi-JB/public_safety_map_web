@@ -263,7 +263,7 @@ export default function MyPageMain({
         )}
         {listError && (
           <div style={{ fontSize: 12, color: "#b91c1c", marginBottom: 8 }}>
-            { listError }
+            {listError}
           </div>
         )}
         {!listLoading && !listError && reports.length === 0 && (

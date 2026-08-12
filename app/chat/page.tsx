@@ -34,7 +34,7 @@ function SendIcon() {
   );
 }
 
-export default function ChatPanel({ roomId }: ChatPanelProps) {
+export function ChatPanel({ roomId }: ChatPanelProps) {
   const user = useAuthStore((s) => s.user);
   const isLoggedIn = user?.id != null;
   const myUserId = String(user?.id ?? "").trim(); // 👈 유저 ID 확보
