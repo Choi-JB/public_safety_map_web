@@ -16,33 +16,26 @@ export type ChatRoom = {
 export type ChatMessage = {
   idx: number;
   rooms_id: number;
-  sender_id: string | null; // 👈 number에서 string으로 변경!
+  sender_id: string | null;
   content: string;
   created_at?: string;
   sender?: { nickname: string } | null;
 };
 
 export type SendMessageInput = {
-  /** chat_rooms.idx */
   roomId: number;
   userId: string;
-  /** users.nickname */
   nickname: string;
   content: string;
+  userRole?: string | null;
 };
 
-export type ChatReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
-
-export type ChatReport = {
+export type RoomAccessInfo = {
   idx: number;
-  message_idx: number | null;
-  rooms_id: number;
-  reporter_id: string | null;
-  reported_id: string | null;
-  content_snapshot: string | null;
-  reason: string | null;
-  status: ChatReportStatus;
-  created_at?: string;
-  resolved_at?: string | null;
-  resolved_by?: string | null;
+  room_type: string | null;
+  user_id: string | null;
+  isAdminDm: boolean;
+  isNotice: boolean;
+  canAccess: boolean;
+  canWrite: boolean;
 };

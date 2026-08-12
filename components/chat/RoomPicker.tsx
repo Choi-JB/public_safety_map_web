@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  createChatRoom,
   fetchChatRooms,
+  getOrCreateAdminDmRoom,
   type ChatRoomListItem,
 } from "@/lib/chat/messages";
 import { useAuthStore } from "@/store/authStore";
@@ -14,14 +14,13 @@ type RoomPickerProps = {
 
 export function RoomPicker({ onEnter }: RoomPickerProps) {
   const user = useAuthStore((s) => s.user);
-  const myUserId = String(user?.id ?? "").trim(); // 👈 유저 ID 확보
+  const myUserId = String(user?.id ?? "").trim();
   const nickname = (user?.nickname ?? "").trim();
 
   const [rooms, setRooms] = useState<ChatRoomListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newRoomId, setNewRoomId] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [openingAdmin, setOpeningAdmin] = useState(false);
   const [offline, setOffline] = useState(
     typeof navigator !== "undefined" ? !navigator.onLine : false
   );
@@ -30,7 +29,6 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
     setLoading(true);
     setError(null);
     try {
-      // 👈 myUserId 파라미터 추가!
       const list = await fetchChatRooms(myUserId || undefined, nickname || undefined);
       setRooms(list);
     } catch (e) {
@@ -48,7 +46,7 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
     } finally {
       setLoading(false);
     }
-  }, [myUserId, nickname]);
+  }, [myUserId, nickname, offline]);
 
   useEffect(() => {
     void loadRooms();
@@ -65,39 +63,22 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
     };
   }, []);
 
-  async function handleCreate() {
-    const roomNum = Number(newRoomId.trim());
-    if (!Number.isInteger(roomNum) || roomNum < 1) {
-      setError("생성할 방 번호(숫자)를 입력해주세요.");
-      return;
-    }
+  async function handleOpenAdminChat() {
     if (!nickname || !myUserId) {
-      setError("방을 만들려면 로그인 및 닉네임이 필요합니다.");
+      setError("관리자와 대화하려면 로그인 및 닉네임이 필요합니다.");
       return;
     }
 
-    setCreating(true);
+    setOpeningAdmin(true);
     setError(null);
     try {
-      // 👈 myUserId 파라미터 추가!
-      await createChatRoom(roomNum, myUserId, nickname);
-      setNewRoomId("");
-      await loadRooms();
+      const roomIdx = await getOrCreateAdminDmRoom(myUserId, nickname);
+      onEnter(roomIdx);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
-      const isNetworkIssue =
-        offline ||
-        !navigator.onLine ||
-        /failed to fetch|networkerror|load failed|missing next_public_supabase/i.test(msg);
-
-      setError(
-        isNetworkIssue
-          ? "현재 인터넷 연결이 없습니다"
-          : msg
-            ? `방 생성 실패: ${msg}`
-            : "방 생성 실패"
-      );
-      setCreating(false);
+      setError(msg || "관리자 대화방 열기 실패");
+    } finally {
+      setOpeningAdmin(false);
     }
   }
 
@@ -199,7 +180,7 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
                   flexShrink: 0,
                 }}
               >
-                {room.idx === 1 ? "제" : room.idx === 2 ? "공" : room.idx}
+                {room.idx === 1 ? "공" : room.idx}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -222,7 +203,7 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  개설자: {room.idx === 1 || room.idx === 2 ? "관리자" : room.user_id || "알 수 없음"}
+                  개설자: {room.idx === 1 ? "관리자" : room.user_id || "알 수 없음"}
                 </div>
               </div>
 
@@ -253,27 +234,13 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
       </div>
 
       {offline && (
-        <p
-          style={{
-            margin: 0,
-            padding: "4px 14px",
-            fontSize: 9,
-            color: "#c00",
-          }}
-        >
+        <p style={{ margin: 0, padding: "4px 14px", fontSize: 9, color: "#c00" }}>
           현재 인터넷 연결이 없습니다
         </p>
       )}
-      
+
       {error && (
-        <p
-          style={{
-            margin: 0,
-            padding: "4px 14px",
-            fontSize: 9,
-            color: "#c00",
-          }}
-        >
+        <p style={{ margin: 0, padding: "4px 14px", fontSize: 9, color: "#c00" }}>
           {error}
         </p>
       )}
@@ -282,47 +249,27 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
         style={{
           padding: "10px 12px",
           borderTop: "1px solid #f0f0f0",
-          display: "flex",
-          gap: 8,
           flexShrink: 0,
         }}
       >
-        <input
-          type="text"
-          inputMode="numeric"
-          value={newRoomId}
-          onChange={(e) => setNewRoomId(e.target.value.replace(/[^\d]/g, ""))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void handleCreate();
-          }}
-          placeholder="방 번호"
-          style={{
-            flex: 1,
-            padding: "6px 8px",
-            border: "1px solid #e1e1e1",
-            borderRadius: 10,
-            fontSize: 11,
-            outline: "none",
-          }}
-        />
         <button
           type="button"
-          disabled={creating || !nickname}
-          onClick={() => void handleCreate()}
+          disabled={openingAdmin || !nickname}
+          onClick={() => void handleOpenAdminChat()}
           style={{
+            width: "100%",
             background: "#007aff",
             color: "#fff",
             border: "none",
-            padding: "0 10px",
+            padding: "10px 12px",
             borderRadius: 10,
-            fontWeight: 600,
-            fontSize: 11,
-            cursor: creating ? "wait" : "pointer",
-            opacity: creating || !nickname ? 0.6 : 1,
-            whiteSpace: "nowrap",
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: openingAdmin ? "wait" : "pointer",
+            opacity: openingAdmin || !nickname ? 0.6 : 1,
           }}
         >
-          {creating ? "…" : "만들기"}
+          {openingAdmin ? "연결 중…" : "관리자와 대화하기"}
         </button>
       </div>
     </div>

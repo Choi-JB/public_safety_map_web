@@ -3,30 +3,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   archiveAdminMessage,
-  createAdminChatRoom,
   deleteAdminMessage,
   fetchAdminChatHistory,
   fetchAdminChatRooms,
   fetchAdminChatUsers,
   fetchAdminRoomMessages,
   fetchAdminRoomsByUser,
-  setUserChatEnabled,
+  fetchAdminUnreadUserIds,
   type AdminChatHistoryItem,
   type AdminChatRoom,
   type AdminChatUser,
 } from "@/lib/chat/adminRooms";
 import {
-  fetchChatReports,
-  updateChatReportStatus,
-  type ChatReport,
-  type ChatReportStatus,
-} from "@/lib/chat/reports";
-import { sendMessage, subscribeRoom } from "@/lib/chat/messages";
+  markRoomAsReadForAdmin,
+  sendMessageAsAdmin,
+  subscribeRoom,
+} from "@/lib/chat/messages";
 import type { ChatMessage } from "@/lib/chat/types";
 import { useAuthStore } from "@/store/authStore";
 import styles from "../admin.module.css";
 
-type ChatSubMenu = "rooms" | "users" | "history" | "reports";
+type ChatSubMenu = "rooms" | "users" | "history";
 
 function formatTime(iso?: string) {
   if (!iso) return "";
@@ -51,14 +48,10 @@ export function AdminChatPanel() {
   const [historyRoomFilter, setHistoryRoomFilter] = useState("");
   const [historyNickFilter, setHistoryNickFilter] = useState("");
   const [historyArchivedOnly, setHistoryArchivedOnly] = useState(false);
-  const [chatReports, setChatReports] = useState<ChatReport[]>([]);
-  const [reportStatusFilter, setReportStatusFilter] = useState<ChatReportStatus | "ALL">("PENDING");
+  const [unreadUserIds, setUnreadUserIds] = useState<Set<string>>(new Set());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [newRoomId, setNewRoomId] = useState("");
-  const [creating, setCreating] = useState(false);
 
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -83,13 +76,18 @@ export function AdminChatPanel() {
     setLoading(true);
     setError(null);
     try {
-      setUsers(await fetchAdminChatUsers());
+      const [list, unread] = await Promise.all([
+        fetchAdminChatUsers(),
+        fetchAdminUnreadUserIds(adminUserId),
+      ]);
+      setUsers(list);
+      setUnreadUserIds(unread);
     } catch (e) {
       setError(e instanceof Error ? e.message : "유저 목록 로드 실패");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminUserId]);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -112,80 +110,11 @@ export function AdminChatPanel() {
     }
   }, [historyRoomFilter, historyNickFilter, historyArchivedOnly]);
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setChatReports(await fetchChatReports({ status: reportStatusFilter }));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "신고 목록 로드 실패");
-    } finally {
-      setLoading(false);
-    }
-  }, [reportStatusFilter]);
-
-  const openReportRoom = (roomsId: number) => {
-    setSubMenu("rooms");
-    setSelectedUser(null);
-    setUserRooms([]);
-    setSelectedRoomId(roomsId);
-  };
-
-  async function handleBanFromReport(r: ChatReport) {
-    if (!r.reported_id) return;
-    if (!confirm("이 유저를 대화 정지할까요?")) return;
-    setError(null);
-    try {
-      await setUserChatEnabled(r.reported_id, false);
-      await updateChatReportStatus({
-        reportIdx: r.idx,
-        status: "RESOLVED",
-        resolvedBy: adminUserId,
-      });
-      await loadReports();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "대화 정지 처리 실패");
-    }
-  }
-
-  async function handleRejectReport(r: ChatReport) {
-    if (!confirm("이 신고를 기각할까요?")) return;
-    setError(null);
-    try {
-      await updateChatReportStatus({
-        reportIdx: r.idx,
-        status: "REJECTED",
-        resolvedBy: adminUserId,
-      });
-      await loadReports();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "기각 처리 실패");
-    }
-  }
-
-  async function handleUnbanFromReport(r: ChatReport) {
-    if (!r.reported_id) return;
-    if (!confirm("이 유저의 대화 정지를 해제할까요?")) return;
-    setError(null);
-    try {
-      await setUserChatEnabled(r.reported_id, true);
-      await updateChatReportStatus({
-        reportIdx: r.idx,
-        status: "RESOLVED",
-        resolvedBy: adminUserId,
-      });
-      await loadReports();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "정지 해제 실패");
-    }
-  }
-
   useEffect(() => {
     if (subMenu === "rooms") void loadRooms();
     if (subMenu === "users") void loadUsers();
     if (subMenu === "history") void loadHistory();
-    if (subMenu === "reports") void loadReports();
-  }, [subMenu, loadRooms, loadUsers, loadHistory, loadReports]);
+  }, [subMenu, loadRooms, loadUsers, loadHistory]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -204,6 +133,8 @@ export function AdminChatPanel() {
         const rows = await fetchAdminRoomMessages(selectedRoomId);
         if (cancelled) return;
         setMessages(rows);
+        await markRoomAsReadForAdmin(selectedRoomId, adminUserId, adminNickname);
+        if (subMenu === "users") void loadUsers();
         unsubscribe = subscribeRoom(selectedRoomId, (msg) => {
           setMessages((prev) => {
             if (prev.some((m) => m.idx === msg.idx)) return prev;
@@ -224,28 +155,7 @@ export function AdminChatPanel() {
       cancelled = true;
       unsubscribe();
     };
-  }, [selectedRoomId]);
-
-  async function handleCreateRoom() {
-    const id = newRoomId.trim();
-    setCreating(true);
-    setError(null);
-    try {
-      const idx = await createAdminChatRoom({
-        roomIdx: id ? Number(id) : undefined,
-        ownerUserId: adminUserId, // 관리자 ID 전달
-        ownerNickname: adminNickname,
-      });
-      setNewRoomId("");
-      await loadRooms();
-      setSelectedRoomId(idx);
-      setSubMenu("rooms");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "방 생성 실패");
-    } finally {
-      setCreating(false);
-    }
-  }
+  }, [selectedRoomId, adminUserId, adminNickname, subMenu, loadUsers]);
 
   async function handleSelectUser(u: AdminChatUser) {
     setSelectedUser(u);
@@ -272,7 +182,7 @@ export function AdminChatPanel() {
     setSending(true);
     setError(null);
     try {
-      const msg = await sendMessage({
+      const msg = await sendMessageAsAdmin({
         roomId: selectedRoomId,
         nickname: adminNickname,
         content: text,
@@ -331,17 +241,6 @@ export function AdminChatPanel() {
           }}
         >
           채팅기록
-        </button>
-        <button
-          type="button"
-          className={`${styles.button} ${subMenu === "reports" ? styles.buttonPrimary : ""}`}
-          onClick={() => {
-            setSubMenu("reports");
-            setSelectedRoomId(null);
-            setSelectedUser(null);
-          }}
-        >
-          신고
         </button>
         <span style={{ marginLeft: "auto", fontSize: 12, color: "#666", alignSelf: "center" }}>
           관리자: <b>{adminNickname}</b>
@@ -449,140 +348,10 @@ export function AdminChatPanel() {
                 </tbody>
               </table>
             </div>
-
-            <p style={{ marginTop: 12, fontSize: 12, color: "#666" }}>
-              신고·제재는 <b>신고</b> 소메뉴에서 처리하세요. 유저 메뉴의 채팅 허용/금지는 수동 조정용입니다.
-            </p>
           </div>
         )}
 
-        {subMenu === "reports" && (
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            <div className={styles.filterRow} style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-              <select
-                value={reportStatusFilter}
-                onChange={(e) =>
-                  setReportStatusFilter(e.target.value as ChatReportStatus | "ALL")
-                }
-                style={{ padding: 8 }}
-              >
-                <option value="PENDING">대기(PENDING)</option>
-                <option value="RESOLVED">처리완료(RESOLVED)</option>
-                <option value="REJECTED">기각(REJECTED)</option>
-                <option value="ALL">전체</option>
-              </select>
-              <button
-                type="button"
-                className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={() => void loadReports()}
-              >
-                조회
-              </button>
-            </div>
-
-            <div className={styles.tableWrap} style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>idx</th>
-                    <th>방</th>
-                    <th>신고자</th>
-                    <th>피신고자</th>
-                    <th>메시지 내용</th>
-                    <th>사유</th>
-                    <th>상태</th>
-                    <th>시간</th>
-                    <th>조치</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr><td colSpan={9}>불러오는 중…</td></tr>
-                  )}
-                  {!loading && chatReports.length === 0 && (
-                    <tr><td colSpan={9}>신고 없음</td></tr>
-                  )}
-                  {chatReports.map((r) => {
-                    const isPending = r.status === "PENDING";
-                    const isResolved = r.status === "RESOLVED";
-                    const isRejected = r.status === "REJECTED";
-                    return (
-                      <tr key={r.idx}>
-                        <td>{r.idx}</td>
-                        <td>{r.rooms_id}</td>
-                        <td>{r.reporter_id ?? "-"}</td>
-                        <td>{r.reported_id ?? "-"}</td>
-                        <td style={{ maxWidth: 280, wordBreak: "break-word" }}>
-                          {r.content_snapshot ?? "-"}
-                        </td>
-                        <td>{r.reason ?? "-"}</td>
-                        <td>
-                          {isPending && "대기"}
-                          {isResolved && "처리완료"}
-                          {isRejected && "기각됨"}
-                          {!isPending && !isResolved && !isRejected && r.status}
-                        </td>
-                        <td>{r.created_at ?? "-"}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <button
-                            type="button"
-                            className={styles.button}
-                            style={{ marginRight: 4 }}
-                            onClick={() => openReportRoom(r.rooms_id)}
-                          >
-                            해당 방으로 가기
-                          </button>
-
-                          {isPending && (
-                            <>
-                              {r.reported_id && (
-                                <button
-                                  type="button"
-                                  className={`${styles.button} ${styles.buttonDanger}`}
-                                  style={{ marginRight: 4 }}
-                                  onClick={() => void handleBanFromReport(r)}
-                                >
-                                  대화 정지
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className={styles.button}
-                                onClick={() => void handleRejectReport(r)}
-                              >
-                                기각
-                              </button>
-                            </>
-                          )}
-
-                          {isResolved && r.reported_id && (
-                            <button
-                              type="button"
-                              className={styles.button}
-                              onClick={() => void handleUnbanFromReport(r)}
-                            >
-                              정지 해제
-                            </button>
-                          )}
-
-                          {isRejected && (
-                            <span style={{ fontSize: 12, color: "#888" }}>조치 없음</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <p style={{ marginTop: 12, fontSize: 12, color: "#666" }}>
-              대기 건은 이 화면에서 대화 정지·기각으로 처리하세요. 「해당 방으로 가기」로 원문 맥락을 확인할 수 있습니다.
-            </p>
-          </div>
-        )}
-
-        {subMenu !== "history" && subMenu !== "reports" && (
+        {subMenu !== "history" && (
         <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
           {/* 왼쪽: 목록 */}
           <div
@@ -629,35 +398,13 @@ export function AdminChatPanel() {
                     >
                       <div style={{ fontSize: 12, fontWeight: 700 }}>
                         {u.user_id} · {u.nickname}
+                        {unreadUserIds.has(u.user_id) && (
+                          <span style={{ color: "#e53935", marginLeft: 6 }}>NEW</span>
+                        )}
                       </div>
                       <div style={{ fontSize: 10, color: "#888" }}>
                         {u.role} · {u.is_online === "Y" ? "online" : "offline"}
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void (async () => {
-                            const next = u.chat_enabled !== "Y";
-                            // user_id를 기반으로 상태 업데이트 (adminRooms.ts 수정 필요)
-                            await setUserChatEnabled(u.user_id, next);
-                            await loadUsers();
-                          })();
-                        }}
-                        style={{
-                          marginTop: 6,
-                          border: "none",
-                          borderRadius: 8,
-                          padding: "4px 10px",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          color: "#fff",
-                          background: u.chat_enabled === "Y" ? "#e53935" : "#007aff",
-                        }}
-                      >
-                        {u.chat_enabled === "Y" ? "채팅 금지" : "채팅 허용"}
-                      </button>
                     </div>
                   ))}                </div>
               </>
@@ -686,23 +433,9 @@ export function AdminChatPanel() {
                     </button>
                   )}
                   {subMenu === "rooms" && (
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input
-                        value={newRoomId}
-                        onChange={(e) => setNewRoomId(e.target.value.replace(/[^\d]/g, ""))}
-                        placeholder="방 번호"
-                        style={{ flex: 1, padding: 6, fontSize: 12, borderRadius: 8, border: "1px solid #ddd" }}
-                      />
-                      <button
-                        type="button"
-                        className={`${styles.button} ${styles.buttonPrimary}`}
-                        disabled={creating}
-                        onClick={() => void handleCreateRoom()}
-                        style={{ fontSize: 12 }}
-                      >
-                        만들기
-                      </button>
-                    </div>
+                    <p style={{ fontSize: 11, color: "#666", margin: 0 }}>
+                      1:1 방은 유저가 「관리자와 대화하기」로 생성합니다.
+                    </p>
                   )}
                 </div>
 
@@ -750,7 +483,7 @@ export function AdminChatPanel() {
                           {room.title ?? `${room.idx}번 대화방`}
                         </div>
                         <div style={{ fontSize: 11, color: "#888" }}>
-                          개설자: {room.idx === 1 || room.idx === 2 ? "관리자" : room.user_id ?? "-"}
+                          개설자: {room.idx === 1 ? "관리자" : room.user_id ?? "-"}
                         </div>
                       </div>
                     </button>

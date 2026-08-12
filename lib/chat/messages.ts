@@ -1,40 +1,205 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import type { ChatMessage, SendMessageInput } from "./types"; // SendMessageInput에 userId 필드가 추가되어야 합니다!
+import type { ChatMessage, SendMessageInput } from "./types";
 import {
   FIXED_CHAT_ROOMS,
   isFixedChatRoom,
+  isNoticeRoom,
+  isAdminDmRoom,
   roomDisplayTitle,
 } from "@/lib/chat/fixedRooms";
+import type { RoomAccessInfo } from "./types";
 
-/** 
- * 유저 확보 후 문자열 user_id 반환 (새 DB 구조 반영)
- */
 export async function ensureChatUser(userId: string, nickname: string): Promise<string> {
   const supabase = createClient();
   const uid = userId.trim();
   const name = nickname.trim();
-  
+
   if (!uid || !name) throw new Error("User ID와 닉네임이 모두 필요합니다.");
 
-  // 새 DB에서는 user 테이블의 user_id가 고유키(UNIQUE)이므로 upsert 사용이 깔끔합니다.
-  const { error } = await supabase
+  const { data: existing } = await supabase
     .from("user")
-    .upsert({ 
-      user_id: uid, 
-      nickname: name, 
-      is_online: "Y", 
-      chat_enabled: "Y", 
-      role: "USER" 
-    }, { onConflict: 'user_id' });
+    .select("user_id")
+    .eq("user_id", uid)
+    .maybeSingle();
 
-  if (error) throw error;
+  if (existing) {
+    const { error } = await supabase
+      .from("user")
+      .update({ nickname: name, is_online: "Y" })
+      .eq("user_id", uid);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("user").insert({
+      user_id: uid,
+      nickname: name,
+      is_online: "Y",
+      chat_enabled: "Y",
+      role: "USER",
+    });
+    if (error) throw error;
+  }
+
   return uid;
 }
 
-/**
- * 방이 없으면 생성, 있으면 idx 반환
- */
+export async function getUserRole(userId: string): Promise<string> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("user")
+    .select("role")
+    .eq("user_id", userId.trim())
+    .maybeSingle();
+  return String((data as { role?: string } | null)?.role ?? "USER");
+}
+
+export async function fetchAdminUserIds(): Promise<string[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("user")
+    .select("user_id")
+    .eq("role", "ADMIN");
+  if (error) throw error;
+  return (data ?? []).map((r) => String((r as { user_id: string }).user_id));
+}
+
+async function fetchRoomRow(roomIdx: number) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("chat_rooms")
+    .select("idx, user_id, room_name, room_type, created_at")
+    .eq("idx", roomIdx)
+    .maybeSingle();
+  if (error) throw error;
+  return data as {
+    idx: number;
+    user_id: string | null;
+    room_name: string | null;
+    room_type: string | null;
+    created_at?: string;
+  } | null;
+}
+
+export async function getRoomAccessInfo(
+  roomIdx: number,
+  userId: string,
+  userRole?: string | null
+): Promise<RoomAccessInfo> {
+  const uid = userId.trim();
+  const role = userRole?.trim() || (await getUserRole(uid));
+  const row = await fetchRoomRow(roomIdx);
+
+  if (!row) {
+    return {
+      idx: roomIdx,
+      room_type: null,
+      user_id: null,
+      isAdminDm: false,
+      isNotice: isNoticeRoom(roomIdx),
+      canAccess: isFixedChatRoom(roomIdx),
+      canWrite: isFixedChatRoom(roomIdx) && (!isNoticeRoom(roomIdx) || role === "ADMIN"),
+    };
+  }
+
+  const isNotice = isNoticeRoom(row.idx) || row.room_type === "NOTICE";
+  const isDm = isAdminDmRoom(row);
+
+  let canAccess = false;
+  if (isFixedChatRoom(row.idx)) canAccess = true;
+  else if (isDm) canAccess = row.user_id === uid || role === "ADMIN";
+  else canAccess = row.user_id === uid;
+
+  let canWrite = canAccess;
+  if (isNotice) canWrite = role === "ADMIN";
+  else if (isDm) canWrite = row.user_id === uid || role === "ADMIN";
+
+  return {
+    idx: row.idx,
+    room_type: row.room_type,
+    user_id: row.user_id,
+    isAdminDm: isDm,
+    isNotice,
+    canAccess,
+    canWrite,
+  };
+}
+
+async function assertCanAccessRoom(roomIdx: number, userId: string, userRole?: string | null) {
+  const access = await getRoomAccessInfo(roomIdx, userId, userRole);
+  if (!access.canAccess) {
+    throw new Error("이 방에 접근할 수 없습니다.");
+  }
+  return access;
+}
+
+async function assertCanWriteRoom(roomIdx: number, userId: string, userRole?: string | null) {
+  const access = await assertCanAccessRoom(roomIdx, userId, userRole);
+  if (!access.canWrite) {
+    if (access.isNotice) throw new Error("공지사항은 관리자만 작성할 수 있습니다.");
+    throw new Error("메시지를 보낼 권한이 없습니다.");
+  }
+  return access;
+}
+
+async function registerAdminDmParticipants(roomIdx: number, ownerUserId: string) {
+  await joinRoom(roomIdx, ownerUserId);
+  const adminIds = await fetchAdminUserIds();
+  for (const adminId of adminIds) {
+    await joinRoom(roomIdx, adminId, "ADMIN");
+  }
+}
+
+export async function getOrCreateAdminDmRoom(
+  userId: string,
+  nickname: string
+): Promise<number> {
+  const uid = userId.trim();
+  const name = nickname.trim();
+  if (!uid || !name) throw new Error("로그인 및 닉네임이 필요합니다.");
+
+  await ensureChatUser(uid, name);
+
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from("chat_rooms")
+    .select("idx")
+    .eq("user_id", uid)
+    .eq("room_type", "ADMIN_DM")
+    .maybeSingle();
+
+  if (existing?.idx != null) {
+    await registerAdminDmParticipants(existing.idx as number, uid);
+    return existing.idx as number;
+  }
+
+  const { data: maxRow } = await supabase
+    .from("chat_rooms")
+    .select("idx")
+    .order("idx", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let nextIdx = Math.max(2, Number((maxRow as { idx?: number } | null)?.idx ?? 1) + 1);
+  while (isFixedChatRoom(nextIdx)) nextIdx += 1;
+
+  const { data: created, error } = await supabase
+    .from("chat_rooms")
+    .insert({
+      idx: nextIdx,
+      user_id: uid,
+      room_name: "관리자와의 대화",
+      room_type: "ADMIN_DM",
+    })
+    .select("idx")
+    .single();
+
+  if (error) throw error;
+
+  const roomIdx = created.idx as number;
+  await registerAdminDmParticipants(roomIdx, uid);
+  return roomIdx;
+}
+
 export async function ensureChatRoom(
   roomIdx: number,
   ownerUserId: string
@@ -56,7 +221,7 @@ export async function ensureChatRoom(
     .insert({
       idx: roomIdx,
       user_id: isFixedChatRoom(roomIdx) ? null : ownerUserId.trim(),
-      room_name: `채팅방 ${roomIdx}` // 추가된 room_name 컬럼 반영
+      room_name: `채팅방 ${roomIdx}`,
     })
     .select("idx")
     .single();
@@ -65,35 +230,42 @@ export async function ensureChatRoom(
   return data.idx as number;
 }
 
-/**
- * 방 참가 (user_id는 이제 문자열입니다)
- */
 export async function joinRoom(
   roomsId: number,
-  userId: string
+  userId: string,
+  userRole?: string | null
 ): Promise<void> {
-  const supabase = createClient();
+  const uid = userId.trim();
+  if (!roomsId || !uid) return;
 
+  await assertCanAccessRoom(roomsId, uid, userRole);
+
+  const supabase = createClient();
   const { data: existing } = await supabase
     .from("room_participants")
     .select("idx")
     .eq("rooms_id", roomsId)
-    .eq("user_id", userId)
+    .eq("user_id", uid)
     .maybeSingle();
 
   if (existing) return;
 
   const { error } = await supabase.from("room_participants").insert({
     rooms_id: roomsId,
-    user_id: userId,
+    user_id: uid,
     last_read_at: new Date().toISOString(),
   });
   if (error) throw error;
 }
 
-export async function fetchMessages(roomId: number): Promise<ChatMessage[]> {
-  const supabase = createClient();
+export async function fetchMessages(
+  roomId: number,
+  userId: string,
+  userRole?: string | null
+): Promise<ChatMessage[]> {
+  await assertCanAccessRoom(roomId, userId, userRole);
 
+  const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
     .select(
@@ -144,7 +316,7 @@ export function subscribeRoom(
         const row = payload.new as {
           idx: number;
           rooms_id: number;
-          sender_id: string | null; // 문자열로 변경
+          sender_id: string | null;
           content: string;
           created_at?: string;
         };
@@ -152,9 +324,9 @@ export function subscribeRoom(
           let sender: { nickname: string } | null = null;
           if (row.sender_id != null) {
             const { data: u } = await supabase
-              .from("user") // users -> user
+              .from("user")
               .select("nickname")
-              .eq("user_id", row.sender_id) // idx -> user_id
+              .eq("user_id", row.sender_id)
               .maybeSingle();
             if (u?.nickname) {
               sender = { nickname: u.nickname as string };
@@ -182,10 +354,11 @@ export function subscribeRoom(
 
 export async function sendMessage({
   roomId,
-  userId, // SendMessageInput 타입에 userId를 추가해주셔야 합니다.
+  userId,
   nickname,
   content,
-}: SendMessageInput & { userId: string }): Promise<ChatMessage> {
+  userRole,
+}: SendMessageInput): Promise<ChatMessage> {
   const trimmedContent = content.trim();
   const uid = userId.trim();
   const name = nickname.trim();
@@ -195,8 +368,8 @@ export async function sendMessage({
   }
 
   const validUserId = await ensureChatUser(uid, name);
+  const role = userRole?.trim() || (await getUserRole(validUserId));
 
-  // 채팅 금지 확인
   {
     const supabaseBan = createClient();
     const { data: urow } = await supabaseBan
@@ -208,13 +381,14 @@ export async function sendMessage({
       throw new Error("채팅이 제한된 계정입니다. 관리자에게 문의하세요.");
     }
   }
-  
-  const roomsId = await ensureChatRoom(roomId, validUserId);
 
-  // 3) 참가자 등록
-  await joinRoom(roomsId, validUserId);
+  await assertCanWriteRoom(roomId, validUserId, role);
 
-  // 4) 메시지 전송
+  const row = await fetchRoomRow(roomId);
+  const roomsId = row?.idx ?? roomId;
+
+  await joinRoom(roomsId, validUserId, role);
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -222,7 +396,7 @@ export async function sendMessage({
       rooms_id: roomsId,
       sender_id: validUserId,
       content: trimmedContent,
-      is_archived: "N"
+      is_archived: "N",
     })
     .select("idx, rooms_id, sender_id, content, created_at")
     .single();
@@ -257,28 +431,44 @@ export async function ensureFixedRooms(): Promise<void> {
     await supabase.from("chat_rooms").insert({
       idx: room.idx,
       user_id: null,
-      room_name: room.label // label을 room_name으로 저장
+      room_name: room.label,
+      room_type: room.room_type,
     });
   }
 }
 
 export async function fetchChatRooms(
-  userId?: string, 
+  userId?: string,
   nickname?: string
 ): Promise<ChatRoomListItem[]> {
   const supabase = createClient();
   await ensureFixedRooms();
 
-  // is_active가 제거되었으므로 조건 생략
   const { data: rooms, error } = await supabase
     .from("chat_rooms")
-    .select("idx, user_id, room_name, created_at")
+    .select("idx, user_id, room_name, room_type, created_at")
     .order("idx", { ascending: true });
 
   if (error) throw error;
 
   const roomList = rooms ?? [];
-  if (roomList.length === 0) {
+  const role = userId?.trim() ? await getUserRole(userId.trim()) : "USER";
+
+  const visibleRooms = roomList.filter((r) => {
+    const idx = r.idx as number;
+    if (isFixedChatRoom(idx)) return true;
+    const row = {
+      idx,
+      room_type: (r as { room_type?: string | null }).room_type ?? null,
+      user_id: r.user_id as string | null,
+    };
+    if (isAdminDmRoom(row)) {
+      return row.user_id === userId?.trim() || role === "ADMIN";
+    }
+    return row.user_id === userId?.trim();
+  });
+
+  if (visibleRooms.length === 0 && roomList.length === 0) {
     return FIXED_CHAT_ROOMS.map((r) => ({
       idx: r.idx,
       title: r.label,
@@ -288,7 +478,7 @@ export async function fetchChatRooms(
   }
 
   if (!userId?.trim() || !nickname?.trim()) {
-    return roomList
+    return visibleRooms
       .map((r) => ({
         idx: r.idx as number,
         title: r.room_name || roomDisplayTitle(r.idx as number),
@@ -317,21 +507,21 @@ export async function fetchChatRooms(
     const lastRead = (p as { last_read_at: string | null }).last_read_at;
     lastReadMap.set(roomsId, lastRead);
   }
-  
+
   const { data: msgRows } = await supabase
     .from("messages")
     .select("rooms_id, sender_id, created_at")
     .eq("is_archived", "N");
-    
+
   const unreadMap = new Map<number, number>();
   for (const row of msgRows ?? []) {
     const roomsId = Number((row as { rooms_id: number }).rooms_id);
     const senderId = String((row as { sender_id: string }).sender_id);
     const createdAt = String((row as { created_at: string }).created_at ?? "");
-    
+
     if (senderId === validUserId) continue;
     if (!lastReadMap.has(roomsId)) continue;
-    
+
     const lastRead = lastReadMap.get(roomsId);
     if (lastRead) {
       if (new Date(createdAt).getTime() > new Date(lastRead).getTime()) {
@@ -342,7 +532,7 @@ export async function fetchChatRooms(
     }
   }
 
-  return roomList
+  return visibleRooms
     .map((r) => ({
       idx: r.idx as number,
       title: r.room_name || roomDisplayTitle(r.idx as number),
@@ -358,35 +548,6 @@ export async function fetchChatRooms(
     });
 }
 
-export async function createChatRoom(
-  roomIdx: number,
-  userId: string,
-  nickname: string
-): Promise<void> {
-  const uid = userId.trim();
-  const name = nickname.trim();
-  
-  if (!Number.isInteger(roomIdx) || roomIdx < 1 || !uid || !name) {
-    throw new Error("생성할 방 번호(숫자)와 유저 ID, 닉네임이 모두 필요합니다.");
-  }
-  if (isFixedChatRoom(roomIdx)) {
-    throw new Error("제보/공지사항 방 번호는 사용할 수 없습니다.");
-  }
-
-  const supabase = createClient();
-
-  // 방 만들기 전 유저 등록 보장
-  await ensureChatUser(uid, name);
-
-  const { error } = await supabase.from("chat_rooms").insert({
-    idx: roomIdx,
-    user_id: uid,
-    room_name: `채팅방 ${roomIdx}`
-  });
-
-  if (error) throw error;
-}
-
 export async function markRoomAsRead(
   roomId: number,
   userId: string,
@@ -396,7 +557,8 @@ export async function markRoomAsRead(
   if (!roomId || !uid) return;
 
   const validUserId = await ensureChatUser(uid, nickname.trim());
-  await joinRoom(roomId, validUserId);
+  const role = await getUserRole(validUserId);
+  await joinRoom(roomId, validUserId, role);
 
   const supabase = createClient();
   const now = new Date().toISOString();
@@ -408,4 +570,62 @@ export async function markRoomAsRead(
     .eq("user_id", validUserId);
 
   if (error) throw error;
+}
+
+/** 관리자 패널: 권한 검사 없이 읽음 처리 */
+export async function markRoomAsReadForAdmin(
+  roomId: number,
+  adminUserId: string,
+  adminNickname: string
+): Promise<void> {
+  const uid = adminUserId.trim();
+  if (!roomId || !uid) return;
+
+  await ensureChatUser(uid, adminNickname.trim());
+
+  const supabase = createClient();
+  const now = new Date().toISOString();
+
+  const { data: existing } = await supabase
+    .from("room_participants")
+    .select("idx")
+    .eq("rooms_id", roomId)
+    .eq("user_id", uid)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from("room_participants")
+      .update({ last_read_at: now })
+      .eq("rooms_id", roomId)
+      .eq("user_id", uid);
+  }
+}
+
+/** 관리자 패널: 권한 검사 없이 메시지 전송 */
+export async function sendMessageAsAdmin(input: SendMessageInput): Promise<ChatMessage> {
+  const { roomId, userId, nickname, content } = input;
+  const uid = userId.trim();
+  const name = nickname.trim();
+  const trimmedContent = content.trim();
+  if (!roomId || !uid || !name || !trimmedContent) {
+    throw new Error("방, 유저 ID, 닉네임, 내용은 필수입니다.");
+  }
+
+  await ensureChatUser(uid, name);
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      rooms_id: roomId,
+      sender_id: uid,
+      content: trimmedContent,
+      is_archived: "N",
+    })
+    .select("idx, rooms_id, sender_id, content, created_at")
+    .single();
+
+  if (error) throw error;
+  return { ...(data as ChatMessage), sender: { nickname: name } };
 }
