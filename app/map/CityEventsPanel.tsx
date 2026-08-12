@@ -16,6 +16,7 @@ import type {
 } from "@/lib/api/types";
 import styles from "./CityEventsPanel.module.css";
 import MyPageMain from "@/app/mypage/main/page";
+import { useAuthStore } from "@/store/authStore";
 
 /** description에서 "장소:" 이후(주소 블록) 제거 */
 function stripPlaceFromDescription(description: string | null) {
@@ -144,6 +145,8 @@ export default function CityEventsPanel() {
   const clearSelection = useMapStore((s) => s.clearSelection);
   /** 격자 탭 타입별 개수 — 지도 마커 store와 분리 (격자 API) */
   const [gridInfras, setGridInfras] = useState<InfrastructureItem[]>([]);
+
+  const user = useAuthStore((s)=> s.user);
 
   useEffect(() => {
     if (selectedGridId == null) {
@@ -359,12 +362,14 @@ export default function CityEventsPanel() {
           icon="!"
           onClick={() => onRailClick("reports")}
         />
+        {user?.role === "USER"? 
         <RailButton
           active={detailOpen && sidePanelTab === "mypage"}
           label="내 제보"
           icon="👤"
           onClick={() => onRailClick("mypage")}
-        />
+        /> : <> </>
+        }
       </nav>
 
       {/* 상세 패널: 레일 오른쪽, 슬라이드 */}
@@ -773,7 +778,6 @@ export default function CityEventsPanel() {
 
             {/* mypage */}
             {sidePanelTab === "mypage" && (
-              
                 <MyPageMain
                   onSelectReport={focusReportOnMap}
                   onSelectFeedback={(gridId) => void focusFeedbackOnMap(gridId)}

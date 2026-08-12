@@ -243,8 +243,8 @@ export default function MyPageMain({
 
   if (error) {
     return <div style={{ fontSize: 12, color: "#b91c1c" }}>
-      { role === "ADMIN" ? "관리자 페이지를 이용해주세요." : error }
-    </div>;
+          {role === "ADMIN" ? "관리자 페이지를 이용해 주세요." : error}
+      </div>;
   }
 
   if (view === "reports") {

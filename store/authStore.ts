@@ -46,7 +46,7 @@ type AuthState = {
 };
 
 export const useAuthStore = create<AuthState>()(
-  persist((set) => ({
+  persist((set, get) => ({
     user: null,
     accessToken: null,
     sessionId: null,
@@ -130,17 +130,17 @@ export const useAuthStore = create<AuthState>()(
           sessionId: "active",
         }));
         return true;
-      } catch (err) {
-
+      } catch {
+        const {authType, accessToken} = get();
+        if(authType === "jwt" && accessToken) {
+          return false;
+        }
         set({
           user: null,
           authType: null,
           sessionId: null,
           accessToken: null,
-          error:
-            err instanceof Error
-              ? err.message
-              : "세션이 만료되었습니다. 다시 로그인해주세요.",
+          error: "세션이 만료되었습니다. 다시 로그인해주세요.",
         });
         return false;
       }

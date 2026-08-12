@@ -16,6 +16,7 @@ const TABS: { id: AdminTab; label: string }[] = [
   { id: "feedbacks", label: "피드백 관리" },
   { id: "city-events", label: "도시정보" },
   { id: "markers", label: "마커 등록" },
+  { id: "chat", label: "채팅 관리" },
   { id: "settings", label: "설정" },
 ];
 
