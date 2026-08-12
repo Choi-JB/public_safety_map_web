@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ChatMessage } from "@/lib/chat/types";
 import {
   FIXED_CHAT_ROOMS,
+  isAdminDmRoom,
   isFixedChatRoom,
   roomDisplayTitle,
 } from "@/lib/chat/fixedRooms";
@@ -24,7 +25,7 @@ export async function fetchAdminChatRooms(): Promise<AdminChatRoom[]> {
   // 🚨 is_active 컬럼 제거 및 room_name 추가 반영
   const { data: rooms, error } = await supabase
     .from("chat_rooms")
-    .select("idx, user_id, room_name, created_at")
+    .select("idx, user_id, room_name, room_type, created_at")
     .order("idx", { ascending: true });
   if (error) throw error;
 
@@ -34,17 +35,19 @@ export async function fetchAdminChatRooms(): Promise<AdminChatRoom[]> {
   if (msgError) throw msgError;
 
   const countMap = new Map<number, number>();
-  const roomsWithMessages = new Set<number>();
   for (const row of msgRows ?? []) {
     const id = Number((row as { rooms_id: number }).rooms_id);
     countMap.set(id, (countMap.get(id) ?? 0) + 1);
-    roomsWithMessages.add(id);
   }
 
-  // 고정방 OR 메시지 있는 방만
   const filtered = (rooms ?? []).filter((r) => {
     const idx = r.idx as number;
-    return isFixedChatRoom(idx) || roomsWithMessages.has(idx);
+    if (isFixedChatRoom(idx)) return true;
+    return isAdminDmRoom({
+      idx,
+      room_type: (r as { room_type?: string | null }).room_type ?? null,
+      user_id: r.user_id as string | null,
+    });
   });
 
   const mapped = filtered.map((r) => ({
@@ -58,7 +61,7 @@ export async function fetchAdminChatRooms(): Promise<AdminChatRoom[]> {
 
   const byIdx = new Map(mapped.map((r) => [r.idx, r]));
 
-  // DB에 없어도 제보·공지 항상 고정
+  // DB에 없어도 공지 항상 고정
   for (const fixed of FIXED_CHAT_ROOMS) {
     if (!byIdx.has(fixed.idx)) {
       byIdx.set(fixed.idx, {
@@ -307,4 +310,47 @@ export async function setUserChatEnabled(
     .update({ chat_enabled: enabled ? "Y" : "N" })
     .eq("user_id", userId); // 🚨 외래키(식별자)를 user_id로 변경
   if (error) throw error;
+}
+
+export async function fetchAdminUnreadUserIds(
+  adminUserId: string
+): Promise<Set<string>> {
+  const supabase = createClient();
+  const adminId = adminUserId.trim();
+  const unread = new Set<string>();
+
+  const { data: dmRooms } = await supabase
+    .from("chat_rooms")
+    .select("idx, user_id, room_type")
+    .eq("room_type", "ADMIN_DM");
+
+  for (const room of dmRooms ?? []) {
+    const roomsId = Number((room as { idx: number }).idx);
+    const ownerId = String((room as { user_id: string }).user_id ?? "");
+    if (!ownerId) continue;
+
+    const { data: part } = await supabase
+      .from("room_participants")
+      .select("last_read_at")
+      .eq("rooms_id", roomsId)
+      .eq("user_id", adminId)
+      .maybeSingle();
+
+    const lastRead = (part as { last_read_at?: string | null } | null)?.last_read_at;
+
+    let q = supabase
+      .from("messages")
+      .select("idx")
+      .eq("rooms_id", roomsId)
+      .eq("sender_id", ownerId)
+      .eq("is_archived", "N")
+      .limit(1);
+
+    if (lastRead) q = q.gt("created_at", lastRead);
+
+    const { data: msgs } = await q;
+    if ((msgs ?? []).length > 0) unread.add(ownerId);
+  }
+
+  return unread;
 }
