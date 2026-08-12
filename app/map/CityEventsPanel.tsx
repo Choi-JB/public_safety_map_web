@@ -362,7 +362,7 @@ export default function CityEventsPanel() {
           icon="!"
           onClick={() => onRailClick("reports")}
         />
-        {user? 
+        {user?.role === "USER"? 
         <RailButton
           active={detailOpen && sidePanelTab === "mypage"}
           label="내 제보"

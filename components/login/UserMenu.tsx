@@ -74,7 +74,7 @@ export function UserMenu() {
             {user.email != null && (
               <div className={styles.userMenuMeta}>{user.email}</div>
             )}
-            {user.role === "ADMIN" && (
+            {/* {user.role === "ADMIN" && (
               <Link
                 href="/admin"
                 className={styles.userMenuAdminLink}
@@ -82,11 +82,22 @@ export function UserMenu() {
               >
                 관리자 페이지
               </Link>
-            )}
+            )} */}
           </div>
 
           <div className={styles.userMenuActions}>
-            <button
+            {user.role === "ADMIN" ? (
+              <button
+                className={styles.userMenuAction}
+                onClick={() => {
+                  setOpen(false);
+                  router.push("/admin");
+                }}
+              >
+                관리자 <br/>
+                페이지
+              </button>
+            ) : <button
               type="button"
               className={styles.userMenuAction}
               onClick={() => {
@@ -97,6 +108,8 @@ export function UserMenu() {
             >
               내 제보
             </button>
+            }
+
             <button
               type="button"
               className={styles.userMenuAction}
