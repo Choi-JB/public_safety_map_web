@@ -22,6 +22,9 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
   const [error, setError] = useState<string | null>(null);
   const [newRoomId, setNewRoomId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [offline, setOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false
+  );
 
   const loadRooms = useCallback(async () => {
     setLoading(true);
@@ -31,7 +34,17 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
       const list = await fetchChatRooms(myUserId || undefined, nickname || undefined);
       setRooms(list);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "방 목록 로드 실패");
+      const msg = e instanceof Error ? e.message : "";
+      const isNetworkIssue =
+        offline ||
+        !navigator.onLine ||
+        /failed to fetch|networkerror|load failed|missing next_public_supabase/i.test(msg);
+
+      setError(
+        isNetworkIssue
+          ? "현재 인터넷 연결이 없습니다"
+          : msg || "방 목록 로드 실패"
+      );
     } finally {
       setLoading(false);
     }
@@ -40,6 +53,17 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
   useEffect(() => {
     void loadRooms();
   }, [loadRooms]);
+
+  useEffect(() => {
+    const goOffline = () => setOffline(true);
+    const goOnline = () => setOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
 
   async function handleCreate() {
     const roomNum = Number(newRoomId.trim());
@@ -60,12 +84,19 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
       setNewRoomId("");
       await loadRooms();
     } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      const isNetworkIssue =
+        offline ||
+        !navigator.onLine ||
+        /failed to fetch|networkerror|load failed|missing next_public_supabase/i.test(msg);
+
       setError(
-        e instanceof Error
-          ? `방 생성 실패: ${e.message}`
-          : "방 생성 실패"
+        isNetworkIssue
+          ? "현재 인터넷 연결이 없습니다"
+          : msg
+            ? `방 생성 실패: ${msg}`
+            : "방 생성 실패"
       );
-    } finally {
       setCreating(false);
     }
   }
@@ -221,6 +252,19 @@ export function RoomPicker({ onEnter }: RoomPickerProps) {
           ))}
       </div>
 
+      {offline && (
+        <p
+          style={{
+            margin: 0,
+            padding: "4px 14px",
+            fontSize: 9,
+            color: "#c00",
+          }}
+        >
+          현재 인터넷 연결이 없습니다
+        </p>
+      )}
+      
       {error && (
         <p
           style={{

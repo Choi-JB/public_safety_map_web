@@ -30,3 +30,19 @@ export type SendMessageInput = {
   nickname: string;
   content: string;
 };
+
+export type ChatReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
+
+export type ChatReport = {
+  idx: number;
+  message_idx: number | null;
+  rooms_id: number;
+  reporter_id: string | null;
+  reported_id: string | null;
+  content_snapshot: string | null;
+  reason: string | null;
+  status: ChatReportStatus;
+  created_at?: string;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+};

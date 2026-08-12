@@ -15,12 +15,18 @@ import {
   type AdminChatRoom,
   type AdminChatUser,
 } from "@/lib/chat/adminRooms";
+import {
+  fetchChatReports,
+  updateChatReportStatus,
+  type ChatReport,
+  type ChatReportStatus,
+} from "@/lib/chat/reports";
 import { sendMessage, subscribeRoom } from "@/lib/chat/messages";
 import type { ChatMessage } from "@/lib/chat/types";
 import { useAuthStore } from "@/store/authStore";
 import styles from "../admin.module.css";
 
-type ChatSubMenu = "rooms" | "users" | "history";
+type ChatSubMenu = "rooms" | "users" | "history" | "reports";
 
 function formatTime(iso?: string) {
   if (!iso) return "";
@@ -45,6 +51,8 @@ export function AdminChatPanel() {
   const [historyRoomFilter, setHistoryRoomFilter] = useState("");
   const [historyNickFilter, setHistoryNickFilter] = useState("");
   const [historyArchivedOnly, setHistoryArchivedOnly] = useState(false);
+  const [chatReports, setChatReports] = useState<ChatReport[]>([]);
+  const [reportStatusFilter, setReportStatusFilter] = useState<ChatReportStatus | "ALL">("PENDING");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +112,80 @@ export function AdminChatPanel() {
     }
   }, [historyRoomFilter, historyNickFilter, historyArchivedOnly]);
 
+  const loadReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setChatReports(await fetchChatReports({ status: reportStatusFilter }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "신고 목록 로드 실패");
+    } finally {
+      setLoading(false);
+    }
+  }, [reportStatusFilter]);
+
+  const openReportRoom = (roomsId: number) => {
+    setSubMenu("rooms");
+    setSelectedUser(null);
+    setUserRooms([]);
+    setSelectedRoomId(roomsId);
+  };
+
+  async function handleBanFromReport(r: ChatReport) {
+    if (!r.reported_id) return;
+    if (!confirm("이 유저를 대화 정지할까요?")) return;
+    setError(null);
+    try {
+      await setUserChatEnabled(r.reported_id, false);
+      await updateChatReportStatus({
+        reportIdx: r.idx,
+        status: "RESOLVED",
+        resolvedBy: adminUserId,
+      });
+      await loadReports();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "대화 정지 처리 실패");
+    }
+  }
+
+  async function handleRejectReport(r: ChatReport) {
+    if (!confirm("이 신고를 기각할까요?")) return;
+    setError(null);
+    try {
+      await updateChatReportStatus({
+        reportIdx: r.idx,
+        status: "REJECTED",
+        resolvedBy: adminUserId,
+      });
+      await loadReports();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "기각 처리 실패");
+    }
+  }
+
+  async function handleUnbanFromReport(r: ChatReport) {
+    if (!r.reported_id) return;
+    if (!confirm("이 유저의 대화 정지를 해제할까요?")) return;
+    setError(null);
+    try {
+      await setUserChatEnabled(r.reported_id, true);
+      await updateChatReportStatus({
+        reportIdx: r.idx,
+        status: "RESOLVED",
+        resolvedBy: adminUserId,
+      });
+      await loadReports();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "정지 해제 실패");
+    }
+  }
+
   useEffect(() => {
     if (subMenu === "rooms") void loadRooms();
     if (subMenu === "users") void loadUsers();
     if (subMenu === "history") void loadHistory();
-  }, [subMenu, loadRooms, loadUsers, loadHistory]);
+    if (subMenu === "reports") void loadReports();
+  }, [subMenu, loadRooms, loadUsers, loadHistory, loadReports]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -217,7 +294,7 @@ export function AdminChatPanel() {
   const roomList = subMenu === "rooms" ? rooms : userRooms;
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>채팅 관리</div>
 
       {/* 소메뉴 */}
@@ -255,6 +332,17 @@ export function AdminChatPanel() {
         >
           채팅기록
         </button>
+        <button
+          type="button"
+          className={`${styles.button} ${subMenu === "reports" ? styles.buttonPrimary : ""}`}
+          onClick={() => {
+            setSubMenu("reports");
+            setSelectedRoomId(null);
+            setSelectedUser(null);
+          }}
+        >
+          신고
+        </button>
         <span style={{ marginLeft: "auto", fontSize: 12, color: "#666", alignSelf: "center" }}>
           관리자: <b>{adminNickname}</b>
         </span>
@@ -271,7 +359,7 @@ export function AdminChatPanel() {
         )}
 
         {subMenu === "history" && (
-          <div>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div className={styles.filterRow} style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
               <input
                 placeholder="방 번호"
@@ -298,7 +386,7 @@ export function AdminChatPanel() {
               </button>
             </div>
 
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrap} style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -363,13 +451,139 @@ export function AdminChatPanel() {
             </div>
 
             <p style={{ marginTop: 12, fontSize: 12, color: "#666" }}>
-              제재: <b>유저</b> 소메뉴에서 해당 유저의 파란/빨간 버튼으로 채팅 허용·금지를 설정하세요.
+              신고·제재는 <b>신고</b> 소메뉴에서 처리하세요. 유저 메뉴의 채팅 허용/금지는 수동 조정용입니다.
             </p>
           </div>
         )}
 
-        {subMenu !== "history" && (
-        <div style={{ display: "flex", gap: 16, minHeight: 480 }}>
+        {subMenu === "reports" && (
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div className={styles.filterRow} style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              <select
+                value={reportStatusFilter}
+                onChange={(e) =>
+                  setReportStatusFilter(e.target.value as ChatReportStatus | "ALL")
+                }
+                style={{ padding: 8 }}
+              >
+                <option value="PENDING">대기(PENDING)</option>
+                <option value="RESOLVED">처리완료(RESOLVED)</option>
+                <option value="REJECTED">기각(REJECTED)</option>
+                <option value="ALL">전체</option>
+              </select>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+                onClick={() => void loadReports()}
+              >
+                조회
+              </button>
+            </div>
+
+            <div className={styles.tableWrap} style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>idx</th>
+                    <th>방</th>
+                    <th>신고자</th>
+                    <th>피신고자</th>
+                    <th>메시지 내용</th>
+                    <th>사유</th>
+                    <th>상태</th>
+                    <th>시간</th>
+                    <th>조치</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr><td colSpan={9}>불러오는 중…</td></tr>
+                  )}
+                  {!loading && chatReports.length === 0 && (
+                    <tr><td colSpan={9}>신고 없음</td></tr>
+                  )}
+                  {chatReports.map((r) => {
+                    const isPending = r.status === "PENDING";
+                    const isResolved = r.status === "RESOLVED";
+                    const isRejected = r.status === "REJECTED";
+                    return (
+                      <tr key={r.idx}>
+                        <td>{r.idx}</td>
+                        <td>{r.rooms_id}</td>
+                        <td>{r.reporter_id ?? "-"}</td>
+                        <td>{r.reported_id ?? "-"}</td>
+                        <td style={{ maxWidth: 280, wordBreak: "break-word" }}>
+                          {r.content_snapshot ?? "-"}
+                        </td>
+                        <td>{r.reason ?? "-"}</td>
+                        <td>
+                          {isPending && "대기"}
+                          {isResolved && "처리완료"}
+                          {isRejected && "기각됨"}
+                          {!isPending && !isResolved && !isRejected && r.status}
+                        </td>
+                        <td>{r.created_at ?? "-"}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <button
+                            type="button"
+                            className={styles.button}
+                            style={{ marginRight: 4 }}
+                            onClick={() => openReportRoom(r.rooms_id)}
+                          >
+                            해당 방으로 가기
+                          </button>
+
+                          {isPending && (
+                            <>
+                              {r.reported_id && (
+                                <button
+                                  type="button"
+                                  className={`${styles.button} ${styles.buttonDanger}`}
+                                  style={{ marginRight: 4 }}
+                                  onClick={() => void handleBanFromReport(r)}
+                                >
+                                  대화 정지
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className={styles.button}
+                                onClick={() => void handleRejectReport(r)}
+                              >
+                                기각
+                              </button>
+                            </>
+                          )}
+
+                          {isResolved && r.reported_id && (
+                            <button
+                              type="button"
+                              className={styles.button}
+                              onClick={() => void handleUnbanFromReport(r)}
+                            >
+                              정지 해제
+                            </button>
+                          )}
+
+                          {isRejected && (
+                            <span style={{ fontSize: 12, color: "#888" }}>조치 없음</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{ marginTop: 12, fontSize: 12, color: "#666" }}>
+              대기 건은 이 화면에서 대화 정지·기각으로 처리하세요. 「해당 방으로 가기」로 원문 맥락을 확인할 수 있습니다.
+            </p>
+          </div>
+        )}
+
+        {subMenu !== "history" && subMenu !== "reports" && (
+        <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
           {/* 왼쪽: 목록 */}
           <div
             style={{
@@ -381,6 +595,7 @@ export function AdminChatPanel() {
               display: "flex",
               flexDirection: "column",
               background: "#fff",
+              minHeight: 0,
             }}
           >
             {subMenu === "users" && !selectedUser && (
@@ -388,7 +603,7 @@ export function AdminChatPanel() {
                 <div style={{ padding: 12, fontWeight: 700, borderBottom: "1px solid #f0f0f0", fontSize: 13 }}>
                   유저 목록 (id / nickname)
                 </div>
-                <div style={{ flex: 1, overflowY: "auto" }}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {loading && <div style={{ padding: 16, color: "#888", fontSize: 12 }}>불러오는 중…</div>}
                   {!loading && users.length === 0 && (
                     <div style={{ padding: 16, color: "#888", fontSize: 12 }}>유저 없음</div>
@@ -491,7 +706,7 @@ export function AdminChatPanel() {
                   )}
                 </div>
 
-                <div style={{ flex: 1, overflowY: "auto" }}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {loading && <div style={{ padding: 16, color: "#888", fontSize: 12 }}>불러오는 중…</div>}
                   {!loading && roomList.length === 0 && (
                     <div style={{ padding: 16, color: "#888", fontSize: 12 }}>방 없음</div>
@@ -556,6 +771,7 @@ export function AdminChatPanel() {
               flexDirection: "column",
               background: "#fff",
               minWidth: 0,
+              minHeight: 0,
             }}
           >
             <div
@@ -576,6 +792,7 @@ export function AdminChatPanel() {
             <div
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: "auto",
                 padding: 14,
                 display: "flex",

@@ -9,6 +9,7 @@ import {
   sendMessage,
   subscribeRoom,
 } from "@/lib/chat/messages";
+import { reportMessage } from "@/lib/chat/reports";
 import type { ChatMessage } from "@/lib/chat/types";
 import { useAuthStore } from "@/store/authStore";
 
@@ -48,6 +49,16 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
   const [status, setStatus] = useState("연결 중...");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [reportingIdx, setReportingIdx] = useState<number | null>(null);
+  const REPORT_REASONS = [
+    "욕설/비방",
+    "스팸/광고",
+    "부적절한 홍보",
+    "기타",
+  ] as const;
+  const [reportTarget, setReportTarget] = useState<ChatMessage | null>(null);
+  const [reportReason, setReportReason] =
+    useState<(typeof REPORT_REASONS)[number]>("욕설/비방");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -137,6 +148,43 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
         <p>채팅을 쓰려면 닉네임이 필요합니다.</p>
       </div>
     );
+  }
+
+  function openReportModal(m: ChatMessage) {
+    if (!myUserId || !m.sender_id) {
+      setError("신고 할 수 없습니다.");
+      return;
+    }
+    if (m.sender_id === myUserId) {
+      setError("자신의 메세지는 신고 할 수 없습니다.");
+      return;
+    }
+    setReportReason("욕설/비방");
+    setReportTarget(m);
+  }
+
+  async function submitReport() {
+    const m = reportTarget;
+    if (!m || !myUserId || !m.sender_id) return;
+
+    setReportingIdx(m.idx);
+    setError(null);
+    try {
+      await reportMessage({
+        messageIdx: m.idx,
+        roomsId: m.rooms_id,
+        reporterId: myUserId,
+        reportedId: m.sender_id,
+        contentSnapshot: m.content,
+        reason: reportReason,
+      });
+      setReportTarget(null);
+      alert("신고 되었습니다.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "신고 실패, 관리자에게 문의해주십시오.");
+    } finally {
+      setReportingIdx(null);
+    }
   }
 
   async function handleSend() {
@@ -256,9 +304,30 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
                   color: "#aaa",
                   marginTop: 2,
                   padding: "0 2px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
               >
-                {formatTime(m.created_at)}
+                <span>{formatTime(m.created_at)}</span>
+                {!mine && m.sender_id && (
+                  <button
+                    type="button"
+                    disabled={reportingIdx === m.idx}
+                    onClick={() => openReportModal(m)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#e53935",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    {reportingIdx === m.idx ? "신고중…" : "신고"}
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -336,6 +405,73 @@ export function ChatPanel({ roomId }: ChatPanelProps) {
           <SendIcon />
         </button>
       </div>
+
+      {reportTarget && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 16,
+              width: 280,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>신고 사유 선택</div>
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>
+              {reportTarget.content.slice(0, 80)}
+              {reportTarget.content.length > 80 ? "…" : ""}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {REPORT_REASONS.map((reason) => (
+                <label key={reason} style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type="radio"
+                    name="report-reason"
+                    checked={reportReason === reason}
+                    onChange={() => setReportReason(reason)}
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setReportTarget(null)}
+                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff" }}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={reportingIdx === reportTarget.idx}
+                onClick={() => void submitReport()}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#e53935",
+                  color: "#fff",
+                  fontWeight: 700,
+                }}
+              >
+                {reportingIdx === reportTarget.idx ? "신고중…" : "신고하기"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

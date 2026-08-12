@@ -63,7 +63,10 @@ export function ChatFab() {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("list");
   const [roomId, setRoomId] = useState<number | null>(null);
-  const nickname = (useAuthStore((s) => s.user)?.nickname ?? "").trim();
+  const [loginHint, setLoginHint] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const isLoggedIn = user?.id != null;
+  const nickname = (user?.nickname ?? "").trim();
 
   /** FAB이 DOM에 있는지 */
   const [fabVisible, setFabVisible] = useState(true);
@@ -75,6 +78,14 @@ export function ChatFab() {
 
   function openPanel() {
     if (openingRef.current || open) return;
+
+    // 로그인 안 됨 → 채팅방 대신 아이콘 위 말풍선
+    if (!isLoggedIn) {
+      setLoginHint(true);
+      window.setTimeout(() => setLoginHint(false), 2500);
+      return;
+    }
+
     openingRef.current = true;
     setView("list");
     setRoomId(null);
@@ -90,9 +101,10 @@ export function ChatFab() {
   }
 
   async function handleBack() {
-    if (roomId != null && nickname) {
+    const myUserId = String(user?.id ?? "").trim();
+    if (roomId != null && nickname && myUserId) {
       try {
-        await markRoomAsRead(roomId, nickname);
+        await markRoomAsRead(roomId, myUserId, nickname);
       } catch {
         // ignore
       }
@@ -135,34 +147,77 @@ export function ChatFab() {
   return (
     <>
       {fabVisible && (
-        <button
-          type="button"
-          aria-label="채팅 열기"
-          onClick={openPanel}
+        <div
           style={{
             position: "fixed",
             right: 20,
             bottom: 20,
             zIndex: 1000,
-            width: 64,
-            height: 64,
-            padding: 0,
-            borderRadius: "50%",
-            border: "none",
-            background: "#E53935",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.28)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             transform: fabDown ? "translateY(80px)" : "translateY(0)",
             opacity: fabDown ? 0 : 1,
             transition: `transform ${FAB_MS}ms ease, opacity ${FAB_MS}ms ease`,
             pointerEvents: fabAnimatingOut ? "none" : "auto",
           }}
         >
-          <MessageIcon />
-        </button>
+          {loginHint && (
+            <div
+              role="status"
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: "calc(100% + 12px)",
+                minWidth: 160,
+                maxWidth: 220,
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "#111",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+                lineHeight: 1.4,
+                boxShadow: "0 8px 20px rgba(0,0,0,0.22)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              로그인 정보가 없습니다
+              {/* 말풍선 꼬리 (아이콘 쪽을 가리킴) */}
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  right: 22,
+                  bottom: -6,
+                  width: 12,
+                  height: 12,
+                  background: "#111",
+                  transform: "rotate(45deg)",
+                  borderRadius: 2,
+                }}
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            aria-label="채팅 열기"
+            onClick={openPanel}
+            style={{
+              width: 64,
+              height: 64,
+              padding: 0,
+              borderRadius: "50%",
+              border: "none",
+              background: "#E53935",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.28)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <MessageIcon />
+          </button>
+        </div>
       )}
 
       {open && (
