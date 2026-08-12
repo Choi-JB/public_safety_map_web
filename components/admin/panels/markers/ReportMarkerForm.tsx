@@ -11,7 +11,7 @@ import { useAuthStore } from "@/store/authStore";
 //추가 본
 import { uploadReportImage } from "@/lib/api/upload";
 
-const REPORT_TYPE_OPTIONS = ["사고", "공사", "자연재해", "통제", "기타"] as const;
+const REPORT_TYPE_OPTIONS = ["사고","교통사고", "공사", "자연재해", "통제", "기타"] as const;
 
 export function ReportMarkerForm() {
   const submitReport = useAdminStore((s) => s.submitReport);
@@ -149,6 +149,8 @@ export function ReportMarkerForm() {
               setMapFocus({
                 lat: Number(nextLat),
                 lng: Number(lng),
+                kind: "report",
+                label: type || undefined,
                 description: "마커 위치",
               });
             }}
@@ -166,6 +168,8 @@ export function ReportMarkerForm() {
               setMapFocus({
                 lat: Number(lat),
                 lng: Number(nextLng),
+                kind: "report",
+                label: type || undefined,
                 description: "마커 위치",
               });
             }}
@@ -178,7 +182,19 @@ export function ReportMarkerForm() {
         <select
           id="marker-report-type"
           value={type}
-          onChange={(e) => setType(e.target.value)}
+          onChange={(e) => {
+            const nextType = e.target.value;
+            setType(nextType);
+            if (!lat || !lng) return;
+            setMapFocus({
+              lat: Number(lat),
+              lng: Number(lng),
+              kind: "report",
+              label: nextType,
+              description: "마커 위치",
+              grid_id: mapFocus?.grid_id,
+            });
+          }}
         >
           <option value="" disabled>
             유형 선택

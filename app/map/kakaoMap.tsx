@@ -16,6 +16,12 @@ import type {
 import { loadKakaoMap } from "./loadkakaoMap";
 import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle";
 import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
+import {
+  MARKER_COLORS,
+  createInfraImage,
+  createPinImage,
+  createReportImage,
+} from "./markerImages";
 import { useMapStore } from "@/store/mapStore";
 
 
@@ -27,46 +33,6 @@ const CENTER_EVENT_RADIUS_KM = 10; // 행사 패널 표시 반경
 const ACCIDENT_REGION_DEBOUNCE_MS = 2000; // 중심 고정 후 구 조회
 const ACCIDENT_HIDE_MIN_LEVEL = 7; // 이상이면 호출/표시 안 함
 
-
-// 마커 종류별 색상 정의
-const MARKER_COLORS = {
-  me: "#2563eb", // 내위치 — 파란
-  report: "#dc2626", // report — 붉은
-  infra: "#16a34a", // infra 기본 — 녹색
-  event: "#ec4899", // 행사 — 분홍
-} as const;
-
-/** 인프라 타입별 핀 색 */
-function infraColor(type: string | null) {
-  switch (type) {
-    case "CCTV":
-      return "#0f766e";
-    case "경찰서":
-      return "#1d4ed8";
-    case "소방서":
-      return "#ea580c";
-    case "편의점":
-      return "#65a30d";
-    default:
-      return MARKER_COLORS.infra;
-  }
-}
-
-/** 인프라 타입별 핀 안 글자 */
-function infraLabel(type: string | null) {
-  switch (type) {
-    case "CCTV":
-      return "C";
-    case "경찰서":
-      return "경";
-    case "소방서":
-      return "소";
-    case "편의점":
-      return "편";
-    default:
-      return undefined;
-  }
-}
 
 /** 사고다발 타입별 폴리곤 색 */
 function accidentColor(type: AccidentZoneType) {
@@ -109,26 +75,6 @@ function coordToSiDoGuGun(
   });
 }
 
-/** SVG 핀 → 카카오 MarkerImage (label 있으면 흰 원에 글자) */
-function createPinImage(kakao: any, color: string, label?: string) {
-  const center = label
-    ? `<circle cx="12" cy="12" r="5.5" fill="#fff"/><text x="12" y="15.5" text-anchor="middle" font-size="9" font-weight="700" fill="${color}" font-family="sans-serif">${label}</text>`
-    : `<circle cx="12" cy="12" r="4.5" fill="#fff"/>`;
-
-  const svg = encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="35" viewBox="0 0 24 35">
-      <path fill="${color}" stroke="#fff" stroke-width="1.5"
-        d="M12 0C5.4 0 0 5.4 0 12c0 9 12 23 12 23s12-14 12-23C24 5.4 18.6 0 12 0z"/>
-      ${center}
-    </svg>`
-  );
-
-  return new kakao.maps.MarkerImage(
-    `data:image/svg+xml;charset=UTF-8,${svg}`,
-    new kakao.maps.Size(24, 35),
-    { offset: new kakao.maps.Point(12, 35) }
-  );
-}
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -620,7 +566,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(r.lat, r.lng),
             title: r.type ?? "제보",
-            image: createPinImage(kakao, MARKER_COLORS.report), // report — 붉은색
+            image: createReportImage(kakao, r.type),
           });
 
           kakao.maps.event.addListener(marker, "click", () => {
@@ -707,11 +653,7 @@ export default function KakaoMap() {
             map,
             position: new kakao.maps.LatLng(item.lat, item.lng),
             title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
-            image: createPinImage(
-              kakao,
-              infraColor(item.type),
-              infraLabel(item.type)
-            ),
+            image: createInfraImage(kakao, item.type),
           });
           markersRef.current.push(marker);
         });
