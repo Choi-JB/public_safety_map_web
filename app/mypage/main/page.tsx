@@ -105,6 +105,7 @@ export default function MyPageMain({
 }) {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const nickname = useAuthStore((s) => s.user?.nickname?.trim() || "사용자");
+  const role = useAuthStore((s) => s.user?.role ?? null);
 
   const [reportCount, setReportCount] = useState<number | null>(null);
   const [feedbackCount, setFeedbackCount] = useState<number | null>(null);
@@ -241,7 +242,9 @@ export default function MyPageMain({
   }
 
   if (error) {
-    return <div style={{ fontSize: 12, color: "#b91c1c" }}>{error}</div>;
+    return <div style={{ fontSize: 12, color: "#b91c1c" }}>
+          {role === "ADMIN" ? "관리자 페이지를 이용해 주세요." : error}
+      </div>;
   }
 
   if (view === "reports") {

@@ -46,7 +46,7 @@ type AuthState = {
 };
 
 export const useAuthStore = create<AuthState>()(
-  persist((set) => ({
+  persist((set, get) => ({
     user: null,
     accessToken: null,
     sessionId: null,
@@ -131,7 +131,10 @@ export const useAuthStore = create<AuthState>()(
         }));
         return true;
       } catch (err) {
-
+        const {authType, accessToken} = get();
+        if(authType === "jwt" && accessToken) {
+          return false;
+        }
         set({
           user: null,
           authType: null,
