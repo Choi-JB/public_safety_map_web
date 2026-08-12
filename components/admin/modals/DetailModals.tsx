@@ -102,12 +102,12 @@ export function FeedbackDetailModal() {
         <div className={styles.modalTitle}>피드백 상세</div>
         <div className={styles.modalBody}>
           <div>작성자: user #{feedback.user_id}</div>
-          <div>격자 ID: {feedback.grid_id}</div>
+          <div>격자 ID: {feedback.grid?.id}</div>
           <div>체감안전도: {feedback.safety_feeling}</div>
           <div>작성일: {formatDate(feedback.created_at)}</div>
           <div>한줄평: {feedback.comment || "-"}</div>
           <div className={styles.miniMap}>
-            격자 #{feedback.grid_id} 중심 좌표는 지도팀 연동 후 표시
+            격자 #{feedback.grid?.id} 중심 좌표는 지도팀 연동 후 표시
           </div>
           {feedback.img_url ? (
             // eslint-disable-next-line @next/next/no-img-element
