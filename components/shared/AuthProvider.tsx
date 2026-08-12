@@ -14,17 +14,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    useAuthStore.persist.rehydrate();
-    setHydrated(useAuthStore.persist.hasHydrated());
-
-    const unsub = useAuthStore.persist.onHydrate(() => 
-    {
+    const unsub = useAuthStore.persist.onFinishHydration(() => {
       setHydrated(true);
       const { authType, checkSession } = useAuthStore.getState();
       if (authType !== "jwt") {
         void checkSession();
       }
     });
+    useAuthStore.persist.rehydrate();
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+      const { authType, checkSession } = useAuthStore.getState();
+      if (authType !== "jwt") {
+        void checkSession();
+      }
+    }
 
     return unsub;
   }, []);
