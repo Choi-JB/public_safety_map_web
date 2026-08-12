@@ -6,11 +6,16 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import styles from "./login.module.css";
+import { useMapStore } from "@/store/mapStore";
+import Link from "next/link";
 
 export function UserMenu() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+
+  const setSidePanelTab = useMapStore((s) => s.setSidePanelTab);
+  const setSidePanelOpen = useMapStore((s) => s.setSidePanelOpen);
 
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -69,13 +74,26 @@ export function UserMenu() {
             {user.email != null && (
               <div className={styles.userMenuMeta}>{user.email}</div>
             )}
+            {user.role === "ADMIN" && (
+              <Link
+                href="/admin"
+                className={styles.userMenuAdminLink}
+                onClick={() => setOpen(false)}
+              >
+                관리자 페이지
+              </Link>
+            )}
           </div>
 
           <div className={styles.userMenuActions}>
             <button
               type="button"
               className={styles.userMenuAction}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setSidePanelTab("mypage");
+                setSidePanelOpen(true);
+              }}
             >
               내 제보
             </button>

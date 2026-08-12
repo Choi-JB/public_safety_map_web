@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { ActiveFilterChecks, DatePresetChecks, REPORT_DATE_PRESETS } from "../shared/FilterChecks";
 import { AuthorNicknameMenu } from "../shared/AuthorNicknameMenu";
@@ -13,6 +13,7 @@ import { RefreshIcon } from "../shared/RefreshIcon";
 import { RestoreIcon } from "../shared/RestoreIcon";
 import { DateInput } from "../shared/ScheduleRow";
 import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -32,12 +33,13 @@ export function ReportsPanel() {
   const applyReportDatePreset = useAdminStore((s) => s.applyReportDatePreset);
   const resetReportFilters = useAdminStore((s) => s.resetReportFilters);
   const loadReports = useAdminStore((s) => s.loadReports);
+  const reportsTotal = useAdminStore((s) => s.reportsTotal);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const openRestoreConfirm = useAdminStore((s) => s.openRestoreConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
-
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   useEffect(() => {
     void loadReports();
@@ -47,7 +49,7 @@ export function ReportsPanel() {
   }, [loadReports, filters.page, filters.filter]);
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>제보 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>
@@ -57,24 +59,38 @@ export function ReportsPanel() {
               value={filters.date_preset}
               onChange={applyReportDatePreset}
               presets={REPORT_DATE_PRESETS}
-            />
-            <DateInput
-              id="report-from"
-              label="등록일"
-              value={filters.date_from}
-              onChange={(date) =>
-                setReportFilters({ date_from: date, date_preset: "" })
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
               }
             />
-            
-            <DateInput
-              id="report-to"
-              label=""
-              value={filters.date_to}
-              onChange={(date) =>
-                setReportFilters({ date_to: date, date_preset: "" })
-              }
-            />
+            {showCustomRange && (
+              <>
+                <DateInput
+                  id="report-from"
+                  label="등록일"
+                  value={filters.date_from}
+                  onChange={(date) =>
+                    setReportFilters({ date_from: date, date_preset: "" })
+                  }
+                />
+
+                <DateInput
+                  id="report-to"
+                  label=""
+                  value={filters.date_to}
+                  onChange={(date) =>
+                    setReportFilters({ date_to: date, date_preset: "" })
+                  }
+                />
+              </>
+            )}
           </div>
 
           <div className={styles.filterRow}>
@@ -83,7 +99,10 @@ export function ReportsPanel() {
               <select
                 id="report-type"
                 value={filters.type}
-                onChange={(e) => setReportFilters({ type: e.target.value })}
+                onChange={(e) => {
+                  setReportFilters({ type: e.target.value, page: 1 });
+                  void loadReports();
+                }}
               >
                 <option value="">전체</option>
                 {reportTypes.map((type) => (
@@ -113,16 +132,6 @@ export function ReportsPanel() {
             />
             <button
               type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
-                setReportFilters({ page: 1 });
-                void loadReports();
-              }}
-            >
-              조회
-            </button>
-            <button
-              type="button"
               className={styles.iconButton}
               title="필터 초기화"
               aria-label="필터 초기화"
@@ -136,6 +145,9 @@ export function ReportsPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {reportsTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -150,10 +162,12 @@ export function ReportsPanel() {
               </tr>
             </thead>
             <tbody>
-              {reports.length === 0 ? (
+              {loading && reports.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={7} />
+              ) : reports.length === 0 ? (
                 <tr>
                   <td colSpan={7} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "제보가 없습니다."}
+                    제보가 없습니다.
                   </td>
                 </tr>
               ) : (

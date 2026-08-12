@@ -8,6 +8,8 @@ import type {
   InfrastructureItem,
   CityEventItem,
   ReportItem,
+  AccidentZoneItem,
+  AccidentZoneType,
 } from "@/lib/api/types";
 import {
   SAFETY_GRADES,
@@ -24,6 +26,21 @@ export const INFRA_TYPES: InfraType[] = [
   "소방서",
   "편의점",
 ];
+
+/** 사고다발 타입 전체 (다발 토글 기본값) */
+export const ACCIDENT_ZONE_TYPES: AccidentZoneType[] = [
+  "pedestrian",
+  "bicycle",
+  "motorcycle",
+  "schoolzone",
+];
+
+export const ACCIDENT_ZONE_LABEL: Record<AccidentZoneType, string> = {
+  pedestrian: "보행자",
+  bicycle: "자전거",
+  motorcycle: "이륜차",
+  schoolzone: "어린이보호구역",
+};
 
 /** 왼쪽 사이드 패널 레이아웃 (Panel ↔ MapControls 동기) */
 export const SIDE_RAIL_WIDTH = 48;
@@ -44,6 +61,16 @@ type MapState = {
 
   selectedGridId: number | null;
   infrastructures: InfrastructureItem[];
+
+  /** 지도에 사고다발 폴리곤 표시 */
+  accidentZonesVisible: boolean;
+  /** 표시할 다발 타입 (비어 있으면 폴리곤 없음) */
+  visibleAccidentTypes: AccidentZoneType[];
+  accidentZones: AccidentZoneItem[];
+  setAccidentZonesVisible: (visible: boolean) => void;
+  toggleVisibleAccidentType: (type: AccidentZoneType) => void;
+  setAccidentZones: (items: AccidentZoneItem[]) => void;
+
 
   /** 지도에 인프라 마커 표시 */
   infraVisible: boolean;
@@ -66,8 +93,8 @@ type MapState = {
   sidePanelOpen: boolean;
   setSidePanelOpen: (open: boolean) => void;
   /** 왼쪽 패널 탭 (레일 / 지도 클릭 공유) */
-  sidePanelTab: "grid" | "events" | "reports";
-  setSidePanelTab: (tab: "grid" | "events" | "reports") => void;
+  sidePanelTab: "grid" | "events" | "reports" | "mypage";
+  setSidePanelTab: (tab: "grid" | "events" | "reports" | "mypage") => void;
 
   setBounds: (bounds: MapBounds) => void;
   setGrids: (grids: GridItem[]) => void;
@@ -118,7 +145,18 @@ export const useMapStore = create<MapState>((set) => ({
         ? s.visibleInfraTypes.filter((t) => t !== type)
         : [...s.visibleInfraTypes, type],
     })),
-
+  accidentZonesVisible: false,
+  visibleAccidentTypes: [...ACCIDENT_ZONE_TYPES],
+  accidentZones: [],
+  setAccidentZonesVisible: (accidentZonesVisible) =>
+    set({ accidentZonesVisible }),
+  toggleVisibleAccidentType: (type) =>
+    set((s) => ({
+      visibleAccidentTypes: s.visibleAccidentTypes.includes(type)
+        ? s.visibleAccidentTypes.filter((t) => t !== type)
+        : [...s.visibleAccidentTypes, type],
+    })),
+  setAccidentZones: (accidentZones) => set({ accidentZones }),
   gridsVisible: true,
   visibleGrades: [...SAFETY_GRADES],
   setGridsVisible: (gridsVisible) => set({ gridsVisible }),

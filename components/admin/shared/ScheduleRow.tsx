@@ -156,7 +156,8 @@ export function DateInput({
           type="text"
           inputMode="numeric"
           placeholder="YYYY-MM-DD"
-          className={styles.iconInputField}
+          maxLength={10}
+          className={`${styles.iconInputField} ${styles.dateTextInput}`}
           value={dateText}
           readOnly={disabled}
           onChange={handleTextChange}

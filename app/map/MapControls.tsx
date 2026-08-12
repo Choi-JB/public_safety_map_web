@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import type { InfraType } from "@/lib/api/types";
+import type { AccidentZoneType, InfraType } from "@/lib/api/types";
 import {
   SAFETY_GRADES,
   safetyGradeColor,
@@ -14,6 +14,8 @@ import {
   SIDE_PANEL_SLIDE_MS,
   SIDE_RAIL_WIDTH,
   useMapStore,
+  ACCIDENT_ZONE_TYPES,
+  ACCIDENT_ZONE_LABEL,
 } from "@/store/mapStore";
 
 
@@ -28,6 +30,30 @@ function infraColorDot(type: InfraType) {
     case "편의점":
       return "#65a30d";
   }
+}
+
+function accidentColorDot(type: AccidentZoneType) {
+  switch (type) {
+    case "pedestrian":
+      return "#dc2626";
+    case "bicycle":
+      return "#2563eb";
+    case "motorcycle":
+      return "#7c3aed";
+    case "schoolzone":
+      return "#ea580c";
+  }
+}
+
+function accidentChipLabel(
+  visible: boolean,
+  types: AccidentZoneType[]
+) {
+  if (!visible) return "위험구간 · 숨김";
+  if (types.length === ACCIDENT_ZONE_TYPES.length) return "위험구간";
+  if (types.length === 0) return "위험구간 · 없음";
+  if (types.length === 1) return `위험구간 · ${ACCIDENT_ZONE_LABEL[types[0]]}`;
+  return `위험구간 · ${types.length}종`;
 }
 
 function nearbyChipLabel(
@@ -92,6 +118,8 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [gridOpen, setGridOpen] = useState(false);
 
+  const [accidentOpen, setAccidentOpen] = useState(false);
+
   const searchAddress = useMapStore((s) => s.searchAddress);
   const moveToCurrentLocation = useMapStore((s) => s.moveToCurrentLocation);
   const sidePanelOpen = useMapStore((s) => s.sidePanelOpen);
@@ -105,6 +133,13 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
   const toggleVisibleGrade = useMapStore((s) => s.toggleVisibleGrade);
 
   const onSearch = () => searchAddress?.(query);
+
+  const accidentZonesVisible = useMapStore((s) => s.accidentZonesVisible);
+  const visibleAccidentTypes = useMapStore((s) => s.visibleAccidentTypes);
+  const setAccidentZonesVisible = useMapStore((s) => s.setAccidentZonesVisible);
+  const toggleVisibleAccidentType = useMapStore(
+    (s) => s.toggleVisibleAccidentType
+  );
 
   const left = adminMode
     ? 12
@@ -175,6 +210,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
             onClick={() => {
               setNearbyOpen((v) => !v);
               setGridOpen(false);
+              setAccidentOpen(false);
             }}
             aria-expanded={nearbyOpen}
             style={{
@@ -284,6 +320,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
             onClick={() => {
               setGridOpen((v) => !v);
               setNearbyOpen(false);
+              setAccidentOpen(false);
             }}
             aria-expanded={gridOpen}
             style={{
@@ -378,6 +415,115 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
                     }}
                   />
                   {grade}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+            {/* 다발 → 표시 on/off + 타입 토글 */}
+            <div style={{ position: "relative" }}>
+        <div style={chipStyle}>
+          <button
+            type="button"
+            onClick={() => {
+              setAccidentOpen((v) => !v);
+              setNearbyOpen(false);
+              setGridOpen(false);
+            }}
+            aria-expanded={accidentOpen}
+            style={{
+              ...actionBtnStyle,
+              border: accidentOpen ? "1px solid #2563eb" : actionBtnStyle.border,
+              background: accidentOpen ? "#eff6ff" : "#fff",
+            }}
+          >
+            {accidentChipLabel(accidentZonesVisible, visibleAccidentTypes)}
+          </button>
+        </div>
+
+        {accidentOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              marginTop: 6,
+              minWidth: 168,
+              background: "#fff",
+              borderRadius: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              padding: 8,
+              zIndex: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setAccidentZonesVisible(!accidentZonesVisible)}
+              style={{
+                ...actionBtnStyle,
+                width: "100%",
+                height: "auto",
+                textAlign: "left",
+                border: accidentZonesVisible
+                  ? "1px solid #2563eb"
+                  : "1px solid transparent",
+                background: accidentZonesVisible ? "#eff6ff" : "#fff",
+                fontWeight: 600,
+              }}
+            >
+              위험구간 표시 {accidentZonesVisible ? "ON" : "OFF"}
+            </button>
+
+            <div
+              style={{
+                height: 1,
+                background: "#e5e7eb",
+                margin: "2px 0",
+              }}
+            />
+
+            {ACCIDENT_ZONE_TYPES.map((type) => {
+              const on = visibleAccidentTypes.includes(type);
+              const disabled = !accidentZonesVisible;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleVisibleAccidentType(type)}
+                  style={{
+                    ...actionBtnStyle,
+                    width: "100%",
+                    height: "auto",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    opacity: disabled ? 0.45 : 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    border:
+                      on && !disabled
+                        ? "1px solid #2563eb"
+                        : "1px solid transparent",
+                    background: on && !disabled ? "#eff6ff" : "#fff",
+                    fontWeight: on ? 600 : 400,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 2,
+                      background: accidentColorDot(type),
+                      flexShrink: 0,
+                    }}
+                  />
+                  {ACCIDENT_ZONE_LABEL[type]}
                 </button>
               );
             })}

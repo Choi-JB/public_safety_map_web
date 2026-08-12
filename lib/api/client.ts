@@ -6,6 +6,8 @@
 import { useAuthStore } from "@/store/authStore";
 import type { ApiResponse } from "./types";
 
+let refreshPromise: Promise<string | null> | null = null;
+
 function getBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4100";
 }
@@ -34,24 +36,30 @@ async function parseResponse<T>(res: Response): Promise<T> {
 
 /** access token 만료 시, refresh token(httpOnly 쿠키)으로 새 access token 조용히 재발급 */
 async function refreshAccessToken(): Promise<string | null> {
-  try {
-    const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-    const data = await parseResponse<{ access_token: string }>(res);
-    useAuthStore.setState({ accessToken: data.access_token });
-    return data.access_token;
-  } catch {
-    // refresh token도 만료/폐기된 경우 — 완전히 로그아웃 처리
-    useAuthStore.setState({
-      user: null,
-      accessToken: null,
-      sessionId: null,
-      authType: null,
-    });
-    return null;
-  }
+  //동시 요청 방지
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await parseResponse<{ access_token: string }>(res);
+      useAuthStore.setState({ accessToken: data.access_token });
+      return data.access_token;
+    } catch {
+      useAuthStore.setState({
+        user: null,
+        accessToken: null,
+        sessionId: null,
+        authType: null,
+      });
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 /** 요청 옵션 빌드 */
@@ -67,6 +75,14 @@ function buildFetchOptions(init: RequestInit | undefined, accessToken: string | 
   };
 }
 
+function isUnauthorized(res: Response, message: string) {
+  return (
+    res.status === 401 ||
+    message.includes("토큰") ||
+    message.includes("만료") ||
+    message.includes("unauthorized")
+  );
+}
 
 /**
  * 요청 호출
@@ -75,36 +91,44 @@ function buildFetchOptions(init: RequestInit | undefined, accessToken: string | 
  * @returns 요청 결과 (JSON 파싱 결과)
  */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const accessToken = useAuthStore.getState().accessToken;
+  // /auth/refresh 자체는 재시도 루프 방지
+  const skipRefresh = path.startsWith("/auth/refresh");
+  const doFetch = async (token: string | null): Promise<{ res: Response; json: ApiResponse<T> }> => {
+    const res = await fetch(`${getBaseUrl()}${path}`, buildFetchOptions(init, token));
+    // json 파싱...
+    let json: ApiResponse<T>;
+    try {
+      json = (await res.json()) as ApiResponse<T>;
+    } catch {
+      throw new Error("서버 응답을 파싱하지 못했습니다.");
+    }
+    return { res, json };
+  };
 
-  const res = await fetch(`${getBaseUrl()}${path}`, {
-    credentials: "include",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  let json: ApiResponse<T>;
-  try {
-    json = (await res.json()) as ApiResponse<T>;
-  } catch {
-    throw new Error("서버 응답을 파싱하지 못했습니다.");
+  let accessToken = useAuthStore.getState().accessToken;
+  // 최초 요청
+  let { res, json }: { res: Response; json: ApiResponse<T> } = await doFetch(accessToken);
+  // 실패 + JWT 유저 + refresh 가능하면 갱신 후 1회 재시도
+  const failed = !res.ok || ("success" in json && json.success === false);
+  const message =
+    "message" in json && json.message ? json.message : `요청 실패 (${res.status})`;
+  if (failed && !skipRefresh && isUnauthorized(res, message)) {
+    const authType = useAuthStore.getState().authType;
+    if (authType === "jwt") {
+      const newToken = await refreshAccessToken(); // 실패 시 내부에서 store clear
+      if (!newToken) {
+        throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+      }
+      ({ res, json } = await doFetch(newToken));
+    }
   }
-
+  // 재시도 후에도 실패면 throw
   if (!res.ok || ("success" in json && json.success === false)) {
-    const message =
+    const msg =
       "message" in json && json.message ? json.message : `요청 실패 (${res.status})`;
-    throw new Error(message);
+    throw new Error(msg);
   }
-
-  if ("data" in json) {
-    return json.data as T;
-  }
-
-  return undefined as T;
+  return "data" in json ? (json.data as T) : (undefined as T);
 }
 
 export async function get<T>(path: string): Promise<T> {
