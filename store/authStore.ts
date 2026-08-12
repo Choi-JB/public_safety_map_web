@@ -153,8 +153,8 @@ export const useAuthStore = create<AuthState>()(
       if (state.authType === "session") {
         return {
           accessToken: null,
-          user: null,
-          authType: null,
+          user: state.user,
+          authType: state.authType,
         };
       }
       // 일반 유저 JWT만 유지
