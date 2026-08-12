@@ -3,11 +3,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import styles from "./login.module.css";
 import { useMapStore } from "@/store/mapStore";
+import Link from "next/link";
 
 export function UserMenu() {
   const router = useRouter();

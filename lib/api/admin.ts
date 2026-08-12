@@ -9,7 +9,8 @@ export type AdminTab =
   | "feedbacks"
   | "markers"
   | "city-events"
-  | "settings";
+  | "settings"
+  | "chat";
 
 export type ActiveFilter = "active" | "inactive" | "all";
 
