@@ -2,43 +2,27 @@
 
 import { useEffect, useRef } from "react";
 import { loadKakaoMap } from "@/app/map/loadkakaoMap";
+import {
+    MARKER_COLORS,
+    createPinImage,
+    createReportImage,
+} from "@/app/map/markerImages";
 import { useMapStore } from "@/store/mapStore";
 import { useAdminStore } from "@/store/adminStore";
-import { fetchGridId } from "@/lib/api/admin";
+import { fetchGridId, type MapFocus } from "@/lib/api/admin";
 
 const MAX_ZOOM_OUT = 7; // --> 최대 줌 아웃 레벨
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
-// 마커 종류별 색상 정의
-// const MARKER_COLORS = {
-//     me: "#2563eb", // 내위치 — 파란
-//     report: "#dc2626", // report — 붉은
-//     infra: "#16a34a", // infra 기본 — 녹색
-//     event: "#ec4899", // 행사 — 분홍
-// } as const;
-
-
-
-/** SVG 핀 → 카카오 MarkerImage (label 있으면 흰 원에 글자) */
-function createPinImage(kakao: any, color: string, label?: string) {
-    const center = label
-        ? `<circle cx="12" cy="12" r="5.5" fill="#fff"/><text x="12" y="15.5" text-anchor="middle" font-size="9" font-weight="700" fill="${color}" font-family="sans-serif">${label}</text>`
-        : `<circle cx="12" cy="12" r="4.5" fill="#fff"/>`;
-
-    const svg = encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="35" viewBox="0 0 24 35">
-      <path fill="${color}" stroke="#fff" stroke-width="1.5"
-        d="M12 0C5.4 0 0 5.4 0 12c0 9 12 23 12 23s12-14 12-23C24 5.4 18.6 0 12 0z"/>
-      ${center}
-    </svg>`
-    );
-
-    return new kakao.maps.MarkerImage(
-        `data:image/svg+xml;charset=UTF-8,${svg}`,
-        new kakao.maps.Size(24, 35),
-        { offset: new kakao.maps.Point(12, 35) }
-    );
+function createFocusMarkerImage(kakao: any, focus: MapFocus) {
+    if (focus.kind === "event") {
+        return createPinImage(kakao, MARKER_COLORS.event);
+    }
+    if (focus.kind === "feedback") {
+        return createPinImage(kakao, "#64748b");
+    }
+    return createReportImage(kakao, focus.label ?? null);
 }
 
 
@@ -249,7 +233,8 @@ export default function AdminMap() {
         var marker = new kakao.maps.Marker({
             map,
             position: new kakao.maps.LatLng(mapFocus.lat, mapFocus.lng),
-            title: mapFocus.description,
+            title: mapFocus.description ?? mapFocus.label ?? "",
+            image: createFocusMarkerImage(kakao, mapFocus),
         });
         focusMarkerRef.current = marker;
         return () => {
@@ -283,6 +268,7 @@ export default function AdminMap() {
                     lng: latlng.getLng(),
                     description: "클릭한 위치",
                     grid_id: gridId,
+                    kind: "report",
                 });
             });
             

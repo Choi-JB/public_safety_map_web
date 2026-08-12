@@ -197,6 +197,7 @@ export function CityEventMarkerForm() {
               setMapFocus({
                 lat: Number(e.target.value),
                 lng: Number(form.lng),
+                kind: "event",
                 description: "마커 위치",
               });
             }}
@@ -213,6 +214,7 @@ export function CityEventMarkerForm() {
               setMapFocus({
                 lat: Number(form.lat),
                 lng: Number(e.target.value),
+                kind: "event",
                 description: "마커 위치",
               });
             }}

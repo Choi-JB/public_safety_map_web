@@ -52,6 +52,7 @@ export function ReportDetailModal() {
                 lat: Number(report.lat),
                 lng: Number(report.lng),
                 label: report.type,
+                kind: "report",
               });
               openReportDetail(null);
             }}
