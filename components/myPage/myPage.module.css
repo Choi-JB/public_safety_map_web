@@ -1,0 +1,213 @@
+/* 담당: 공통 — 마이페이지 / 비밀번호 변경 (로그인 스타일 참고, 독립 스코프) */
+
+.root {
+  --mypage-text: #191919;
+  --mypage-muted: #8e8e8e;
+  --mypage-line: #e5e5e5;
+  --mypage-line-focus: #03c75a;
+  --mypage-green: #2f5d7c;
+  --mypage-danger: #ff3b30;
+  width: 100%;
+  color: var(--mypage-text);
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.page {
+  --mypage-text: #191919;
+  --mypage-muted: #8e8e8e;
+  --mypage-line: #e5e5e5;
+  --mypage-line-focus: #03c75a;
+  --mypage-green: #2f5d7c;
+  --mypage-danger: #ff3b30;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #f5f6f7;
+  color: var(--mypage-text);
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  box-sizing: border-box;
+}
+
+.brand {
+  margin: 0 0 28px;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-align: center;
+  color: #000;
+}
+
+.card {
+  width: min(400px, 100%);
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.formTitle {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--mypage-text);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mypage-muted);
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-bottom: 1px solid var(--mypage-line);
+  padding-bottom: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.inputRow:focus-within {
+  border-bottom-color: var(--mypage-line-focus);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--mypage-text);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.input::placeholder {
+  color: #c4c4c4;
+}
+
+.iconBtn {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #b0b0b0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.iconBtn:hover {
+  color: #666;
+  background: #f3f3f3;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--mypage-green);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #264a63;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.buttonSecondary {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fff;
+  color: var(--mypage-text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background: #f5f6f7;
+}
+
+.buttonSecondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: -6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff5f5;
+  color: var(--mypage-danger);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.summaryCard {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px 24px 24px 12px;
+  padding: 10px;
+  background: #fff;
+  box-sizing: border-box;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.summaryCard:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}

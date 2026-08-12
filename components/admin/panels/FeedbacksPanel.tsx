@@ -2,14 +2,18 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
 import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
+import { AuthorNicknameMenu } from "../shared/AuthorNicknameMenu";
 import { formatCreatedAt } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
 import { SafetyBadge } from "../shared/SafetyBadge";
+import { DateInput } from "../shared/ScheduleRow";
+import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
 
@@ -31,17 +35,19 @@ export function FeedbacksPanel() {
   );
   const resetFeedbackFilters = useAdminStore((s) => s.resetFeedbackFilters);
   const loadFeedbacks = useAdminStore((s) => s.loadFeedbacks);
+  const feedbackTotal = useAdminStore((s) => s.feedbackTotal);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   useEffect(() => {
     void loadFeedbacks();
   }, [loadFeedbacks, filters.page, filters.filter]);
 
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>피드백 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>
@@ -50,35 +56,37 @@ export function FeedbacksPanel() {
               idPrefix="fb"
               value={filters.date_preset}
               onChange={applyFeedbackDatePreset}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
-            <div className={styles.field}>
-              <label htmlFor="fb-from">시작일</label>
-              <input
-                id="fb-from"
-                type="date"
-                value={filters.date_from}
-                onChange={(e) =>
-                  setFeedbackFilters({
-                    date_from: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="fb-to">종료일</label>
-              <input
-                id="fb-to"
-                type="date"
-                value={filters.date_to}
-                onChange={(e) =>
-                  setFeedbackFilters({
-                    date_to: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
+            {showCustomRange && (
+              <>
+                <DateInput
+                  id="fb-from"
+                  label="등록일"
+                  value={filters.date_from}
+                  onChange={(date) =>
+                    setFeedbackFilters({ date_from: date, date_preset: "" })
+                  }
+                />
+                <DateInput
+                  id="fb-to"
+                  label=""
+                  value={filters.date_to}
+                  onChange={(date) =>
+                    setFeedbackFilters({ date_to: date, date_preset: "" })
+                  }
+                />
+              </>
+            )}
           </div>
 
           <div className={styles.filterRow}>
@@ -87,9 +95,13 @@ export function FeedbacksPanel() {
               <select
                 id="fb-feeling"
                 value={filters.safety_feeling}
-                onChange={(e) =>
-                  setFeedbackFilters({ safety_feeling: e.target.value })
-                }
+                onChange={(e) => {
+                  setFeedbackFilters({
+                    safety_feeling: e.target.value,
+                    page: 1,
+                  });
+                  void loadFeedbacks();
+                }}
               >
                 <option value="">전체</option>
                 {safetyFeelings.map((feeling) => (
@@ -104,28 +116,21 @@ export function FeedbacksPanel() {
               value={filters.filter}
               onChange={(filter) => setFeedbackFilters({ filter, page: 1 })}
             />
-            <div className={styles.field}>
-              <label htmlFor="fb-keyword">검색어</label>
-              <input
-                id="fb-keyword"
-                type="text"
-                value={filters.keyword}
-                placeholder="한줄평, 작성자"
-                onChange={(e) =>
-                  setFeedbackFilters({ keyword: e.target.value })
-                }
-              />
-            </div>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
+            <SearchQueryField
+              idPrefix="fb"
+              mode={filters.search_mode}
+              query={filters.search_query}
+              onModeChange={(search_mode) =>
+                setFeedbackFilters({ search_mode })
+              }
+              onQueryChange={(search_query) =>
+                setFeedbackFilters({ search_query })
+              }
+              onSubmit={() => {
                 setFeedbackFilters({ page: 1 });
                 void loadFeedbacks();
               }}
-            >
-              조회
-            </button>
+            />
             <button
               type="button"
               className={styles.iconButton}
@@ -141,6 +146,9 @@ export function FeedbacksPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {feedbackTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -150,15 +158,17 @@ export function FeedbacksPanel() {
                 <th>작성자</th>
                 <th>한줄평</th>
                 <th>사진</th>
-                <th>작성일</th>
+                <th>등록일</th>
                 <th>삭제</th>
               </tr>
             </thead>
             <tbody>
-              {feedbacks.length === 0 ? (
+              {loading && feedbacks.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={7} />
+              ) : feedbacks.length === 0 ? (
                 <tr>
                   <td colSpan={7} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "피드백이 없습니다."}
+                    피드백이 없습니다.
                   </td>
                 </tr>
               ) : (
@@ -181,8 +191,8 @@ export function FeedbacksPanel() {
                           onClick={() =>
                             setMapFocus({
                               // 피드백은 격자 단위 — 격자 중심좌표 연동 전 미리보기
-                              lat: 37.5665,
-                              lng: 126.978,
+                              lat: item.grid?.lat ?? 0,
+                              lng: item.grid?.lng ?? 0,
                               label: item.user?.nickname || item.safety_feeling,
                               id: item.id,
                               kind: "feedback",
@@ -193,7 +203,19 @@ export function FeedbacksPanel() {
                       <td>
                         <SafetyBadge feeling={item.safety_feeling} />
                       </td>
-                      <td>{authorLabel(item)}</td>
+                      <td>
+                        <AuthorNicknameMenu
+                          nickname={authorLabel(item)}
+                          onSearchPosts={(nickname) => {
+                            setFeedbackFilters({
+                              search_mode: "user",
+                              search_query: nickname,
+                              page: 1,
+                            });
+                            void loadFeedbacks();
+                          }}
+                        />
+                      </td>
                       <td>{item.comment || "-"}</td>
                       <td>
                         {item.img_url ? (

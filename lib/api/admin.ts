@@ -8,9 +8,15 @@ export type AdminTab =
   | "reports"
   | "feedbacks"
   | "markers"
-  | "city-events";
+  | "city-events"
+  | "settings";
 
 export type ActiveFilter = "active" | "inactive" | "all";
+
+export type DailyCount = {
+  date: string;
+  count: string | number;
+};
 
 export type AdminSummary = {
   active_reports: number;
@@ -18,6 +24,9 @@ export type AdminSummary = {
   total_feedbacks: number;
   feedbacks_today: number;
   active_city_events: number;
+  inactive_city_events: number;
+  five_days_reports_count: DailyCount[];
+  five_days_feedbacks_count: DailyCount[];
 };
 
 export type AdminReport = {
@@ -35,23 +44,39 @@ export type AdminReport = {
   user?: { nickname: string } | null;
 };
 
-export type DatePreset = "" | "1y" | "6m" | "3m" | "1m";
+
+export type DatePreset =
+  | ""
+  | "today"
+  | "1y"
+  | "6m"
+  | "3m"
+  | "1m"
+  | "this_week"
+  | "this_month"
+  | "this_year";
 
 export type ReportsListResult = {
   reports: AdminReport[];
   types: string[];
+  total:number;
 };
 
 export type AdminFeedback = {
   id: string;
   user_id: string;
-  grid_id: string;
   safety_feeling: string;
   comment: string;
   img_url: string | null;
   is_active: "Y" | "N";
   created_at: string;
   user?: { nickname: string } | null;
+  grid?: { id: number; lat: number; lng: number } | null;
+};
+
+export type FeedbacksListResult = {
+  feedbacks: AdminFeedback[];
+  total:number;
 };
 
 export type AdminCityEvent = {
@@ -68,14 +93,17 @@ export type AdminCityEvent = {
   img_url?: string | null;
   is_active?: "Y" | "N";
   user?: { nickname: string } | null;
+  deleted_at?: string | null;
 };
 
 export type EventsListResult = {
   events: AdminCityEvent[];
   types: string[];
+  total:number;
 };
 
 export type CreateEventPayload = {
+  id?: number;
   type: string;
   title: string;
   description: string;
@@ -83,6 +111,17 @@ export type CreateEventPayload = {
   lng: number;
   start_at: string;
   end_at: string;
+  img_url?: string | null;
+};
+
+export type CreateReportPayload = {
+  id?: number;
+  grid_id: number;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+  img_url?: string | null;
 };
 
 export type UpdateEventPayload = CreateEventPayload & { id: number };
@@ -90,6 +129,7 @@ export type UpdateEventPayload = CreateEventPayload & { id: number };
 export type MapFocus = {
   lat: number;
   lng: number;
+  grid_id?: number;
   label?: string;
   id?: string;
   kind?: "report" | "feedback" | "event";
@@ -101,6 +141,12 @@ export type DeleteTarget =
   | { kind: "feedback"; id: string; label: string }
   | { kind: "event"; id: string; label: string };
 
+export type RestoreTarget =
+  | { kind: "report"; id: string; label: string }
+  | { kind: "event"; id: string; label: string };
+
+export type EventScheduleStatus = "scheduled" | "ongoing" | "ended";
+
 export type ListQuery = {
   page: number;
   limit: number;
@@ -108,6 +154,9 @@ export type ListQuery = {
   date_from?: string;
   date_to?: string;
   date_range?: number;
+  nickname?: string;
+  keyword?: string;
+  status?: EventScheduleStatus | "";
 };
 
 export const REPORT_TYPES = [
@@ -180,6 +229,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       "message" in json && json.message
         ? json.message
         : `요청 실패 (${res.status})`;
+
+    /**
+     * 세션 만료 처리
+     * @param res 응답
+     * @param message 응답 메시지
+     * @throws 세션 만료 예외 발생
+     */
+    if (
+      res.status === 401 ||
+      res.status === 403 ||
+      message.includes("세션")
+    ) {
+      const err = new Error(message);
+      (err as Error & { code?: string }).code = "SESSION_EXPIRED";
+      throw err;
+    }
     throw new Error(message);
   }
 
@@ -231,13 +296,10 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    nickname: query.nickname,
+    keyword: query.keyword,
   });
 
-  /**
-   * 신고 목록 조회
-   * @param qs 쿼리 문자열
-   * @returns 신고 목록 (JSON 파싱 결과)
-   */
   const res = await fetch(`${getBaseUrl()}/admin/reports${qs}`, {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -261,6 +323,7 @@ export async function fetchReports(query: ListQuery): Promise<ReportsListResult>
   return {
     reports: "data" in json ? (json.data ?? []) : [],
     types: "types" in json && Array.isArray(json.types) ? json.types : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
   };
 }
 
@@ -277,11 +340,22 @@ export async function deleteReport(id: number) {
 }
 
 /**
+ * 신고 복구 (소프트 삭제 해제)
+ * @param id 신고 ID
+ */
+export async function restoreReport(id: number) {
+  return request<undefined>("/admin/restore-report", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+/**
  * 피드백 목록 조회
  * @param query 조회 조건
  * @returns 피드백 목록 (JSON 파싱 결과)
  */
-export async function fetchFeedbacks(query: ListQuery) {
+export async function fetchFeedbacks(query: ListQuery): Promise<FeedbacksListResult> {
   const qs = buildQuery({
     page: query.page,
     limit: query.limit,
@@ -289,10 +363,32 @@ export async function fetchFeedbacks(query: ListQuery) {
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    nickname: query.nickname,
+    keyword: query.keyword,
   });
-  return request<AdminFeedback[]>(`/admin/feedbacks${qs}`);
+  const res = await fetch(`${getBaseUrl()}/admin/feedbacks${qs}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  let json: ApiResponse<AdminFeedback[]> & { types?: string[] };
+  try {
+    json = (await res.json()) as ApiResponse<AdminFeedback[]> & { types?: string[] };
+  } catch {
+    throw new Error("서버 응답을 파싱하지 못했습니다.");
+  }
+  if (!res.ok || json.success === false) {
+    throw new Error(
+      "message" in json && json.message
+        ? json.message
+        : `요청 실패 (${res.status})`,
+    );
+  }
+  return {
+    feedbacks: "data" in json ? (json.data ?? []) : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
+  };
 }
-
+  
 /**
  * 피드백 삭제
  * @param id 피드백 ID
@@ -318,6 +414,8 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
     date_from: query.date_from,
     date_to: query.date_to,
     date_range: query.date_from ? undefined : (query.date_range ?? 30),
+    keyword: query.keyword,
+    status: query.status || undefined,
   });
 
   /**
@@ -352,6 +450,7 @@ export async function fetchEvents(query: ListQuery): Promise<EventsListResult> {
     types: Array.isArray(json.types)
       ? json.types.filter((t): t is string => typeof t === "string" && Boolean(t))
       : [],
+    total: "total" in json && typeof json.total === "number" ? json.total : 0,
   };
 }
 
@@ -366,7 +465,16 @@ export async function createEvent(payload: CreateEventPayload) {
     start_at: payload.start_at,
     end_at: payload.end_at,
   });
+
   return request<undefined>(`/admin/create-event${qs}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** 제보 마커 생성 */
+export async function createReport(payload: CreateReportPayload) {
+  return request<undefined>("/admin/create-report", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -398,4 +506,25 @@ export async function deleteEvent(id: number) {
     method: "POST",
     body: JSON.stringify({ id }),
   });
+}
+
+/**
+ * 이벤트 복구 (소프트 삭제 해제)
+ * @param id 이벤트 ID
+ */
+export async function restoreEvent(id: number) {
+  return request<undefined>("/admin/restore-event", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+/**
+ * 그리드 ID 조회
+ * @param lat 위도
+ * @param lng 경도
+ * @returns 그리드 ID
+ */
+export async function fetchGridId(lat: number, lng: number): Promise<number> {
+  return request<number>(`/admin/grid-id?lat=${lat}&lng=${lng}`);
 }

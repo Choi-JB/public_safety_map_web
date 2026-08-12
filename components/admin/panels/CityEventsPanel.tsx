@@ -2,19 +2,63 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAdminStore } from "@/store/adminStore";
-import { ActiveFilterChecks, DatePresetChecks } from "../shared/FilterChecks";
-import { formatCreatedAt } from "../shared/formatDate";
+import {
+  ActiveFilterChecks,
+  DatePresetChecks,
+  EVENT_DATE_PRESETS,
+} from "../shared/FilterChecks";
+import { formatDateRange } from "../shared/formatDate";
 import { MapMoveButton } from "../shared/MapMoveButton";
 import { Pagination } from "../shared/Pagination";
 import { RefreshIcon } from "../shared/RefreshIcon";
+import { RestoreIcon } from "../shared/RestoreIcon";
+import { SearchQueryField } from "../shared/SearchQueryField";
+import { SkeletonTableRows } from "../shared/Skeleton";
 import { TrashIcon } from "../shared/TrashIcon";
 import styles from "../admin.module.css";
+import { getDateRangeFromYearMonth } from "@/store/adminStore";
+
+type EventStatus = "scheduled" | "ongoing" | "ended";
+
+function getEventStatus(
+  startAt: string,
+  endAt: string,
+  now: number,
+): EventStatus | null {
+  const start = new Date(startAt).getTime();
+  const end = new Date(endAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (now < start) return "scheduled";
+  if (now >= end) return "ended";
+  return "ongoing";
+}
+
+const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
+  scheduled: "예정",
+  ongoing: "진행",
+  ended: "종료",
+};
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+function yearOptions(centerYear: number) {
+  const years: number[] = [];
+  for (let y = centerYear - 5; y <= centerYear + 5; y += 1) years.push(y);
+  return years;
+}
+
+function parseYearMonth(value: string) {
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]) };
+}
 
 export function CityEventsPanel() {
   const events = useAdminStore((s) => s.events);
   const eventTypes = useAdminStore((s) => s.eventTypes);
+  const eventTotal = useAdminStore((s) => s.eventTotal);
   const filters = useAdminStore((s) => s.eventFilters);
   const loading = useAdminStore((s) => s.loading);
   const setEventFilters = useAdminStore((s) => s.setEventFilters);
@@ -23,16 +67,63 @@ export function CityEventsPanel() {
   const loadEvents = useAdminStore((s) => s.loadEvents);
   const openEventDetail = useAdminStore((s) => s.openEventDetail);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
+  const openRestoreConfirm = useAdminStore((s) => s.openRestoreConfirm);
   const openImagePreview = useAdminStore((s) => s.openImagePreview);
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
   const mapFocus = useAdminStore((s) => s.mapFocus);
+  const [now, setNow] = useState(() => Date.now());
+  const [showCustomRange, setShowCustomRange] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const fromYm = parseYearMonth(filters.date_from) ?? {
+    year: currentYear,
+    month: new Date().getMonth() + 1,
+  };
+  const toYm = parseYearMonth(filters.date_to) ?? {
+    year: currentYear,
+    month: new Date().getMonth() + 1,
+  };
+
+  function applyYearMonthRange(
+    nextFrom: { year: number; month: number },
+    nextTo: { year: number; month: number },
+  ) {
+    let from = nextFrom;
+    let to = nextTo;
+    const fromKey = from.year * 12 + from.month;
+    const toKey = to.year * 12 + to.month;
+    if (fromKey > toKey) {
+      // 시작이 종료보다 뒤면 종료를 시작에 맞춤
+      to = { ...from };
+    }
+    const range = getDateRangeFromYearMonth(
+      from.year,
+      from.month,
+      to.year,
+      to.month,
+    );
+    setEventFilters({
+      date_preset: "",
+      date_from: range.date_from,
+      date_to: range.date_to,
+      page: 1,
+    });
+  }
 
   useEffect(() => {
     void loadEvents();
+    return () => {
+      setMapFocus(null);
+    }
   }, [loadEvents, filters.page, filters.filter]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <div>
+    <div className={styles.panelRoot}>
       <div className={styles.panelHeader}>도시정보 관리</div>
       <div className={styles.panelBody}>
         <div className={styles.filterBar}>
@@ -41,35 +132,94 @@ export function CityEventsPanel() {
               idPrefix="event"
               value={filters.date_preset}
               onChange={applyEventDatePreset}
+              presets={EVENT_DATE_PRESETS}
+              trailing={
+                <button
+                  type="button"
+                  className={styles.filterPill}
+                  aria-pressed={showCustomRange}
+                  onClick={() => setShowCustomRange((v) => !v)}
+                >
+                  직접 입력
+                </button>
+              }
             />
+            {showCustomRange && (
             <div className={styles.field}>
-              <label htmlFor="event-from">시작일</label>
-              <input
-                id="event-from"
-                type="date"
-                value={filters.date_from}
-                onChange={(e) =>
-                  setEventFilters({
-                    date_from: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
+              <span className={styles.fieldLabel}>기간 (년/월)</span>
+              <div className={styles.yearMonthRange}>
+                <select
+                  className={styles.yearSelect}
+                  aria-label="시작 연도"
+                  value={fromYm.year}
+                  onChange={(e) =>
+                    applyYearMonthRange(
+                      { year: Number(e.target.value), month: fromYm.month },
+                      toYm,
+                    )
+                  }
+                >
+                  {yearOptions(currentYear).map((year) => (
+                    <option key={`from-y-${year}`} value={year}>
+                      {year}년
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.monthSelect}
+                  aria-label="시작 월"
+                  value={fromYm.month}
+                  onChange={(e) =>
+                    applyYearMonthRange(
+                      { year: fromYm.year, month: Number(e.target.value) },
+                      toYm,
+                    )
+                  }
+                >
+                  {MONTH_OPTIONS.map((month) => (
+                    <option key={`from-m-${month}`} value={month}>
+                      {month}월
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.yearMonthSep}>~</span>
+                <select
+                  className={styles.yearSelect}
+                  aria-label="종료 연도"
+                  value={toYm.year}
+                  onChange={(e) =>
+                    applyYearMonthRange(fromYm, {
+                      year: Number(e.target.value),
+                      month: toYm.month,
+                    })
+                  }
+                >
+                  {yearOptions(currentYear).map((year) => (
+                    <option key={`to-y-${year}`} value={year}>
+                      {year}년
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={styles.monthSelect}
+                  aria-label="종료 월"
+                  value={toYm.month}
+                  onChange={(e) =>
+                    applyYearMonthRange(fromYm, {
+                      year: toYm.year,
+                      month: Number(e.target.value),
+                    })
+                  }
+                >
+                  {MONTH_OPTIONS.map((month) => (
+                    <option key={`to-m-${month}`} value={month}>
+                      {month}월
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className={styles.field}>
-              <label htmlFor="event-to">종료일</label>
-              <input
-                id="event-to"
-                type="date"
-                value={filters.date_to}
-                onChange={(e) =>
-                  setEventFilters({
-                    date_to: e.target.value,
-                    date_preset: "",
-                  })
-                }
-              />
-            </div>
+          )}
           </div>
 
           <div className={styles.filterRow}>
@@ -78,7 +228,10 @@ export function CityEventsPanel() {
               <select
                 id="event-type"
                 value={filters.type}
-                onChange={(e) => setEventFilters({ type: e.target.value })}
+                onChange={(e) => {
+                  setEventFilters({ type: e.target.value, page: 1 });
+                  void loadEvents();
+                }}
               >
                 <option value="">전체</option>
                 {eventTypes.map((type) => (
@@ -88,21 +241,41 @@ export function CityEventsPanel() {
                 ))}
               </select>
             </div>
+            <div className={styles.field}>
+              <label htmlFor="event-status">상태</label>
+              <select
+                id="event-status"
+                value={filters.status}
+                onChange={(e) => {
+                  setEventFilters({
+                    status: e.target.value as typeof filters.status,
+                    page: 1,
+                  });
+                  void loadEvents();
+                }}
+              >
+                <option value="">전체</option>
+                <option value="scheduled">예정</option>
+                <option value="ongoing">진행</option>
+                <option value="ended">종료</option>
+              </select>
+            </div>
             <ActiveFilterChecks
               idPrefix="event"
               value={filters.filter}
               onChange={(filter) => setEventFilters({ filter, page: 1 })}
             />
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-              onClick={() => {
+            <SearchQueryField
+              idPrefix="event"
+              mode="keyword"
+              query={filters.keyword}
+              showModeSelect={false}
+              onQueryChange={(keyword) => setEventFilters({ keyword })}
+              onSubmit={() => {
                 setEventFilters({ page: 1 });
                 void loadEvents();
               }}
-            >
-              조회
-            </button>
+            />
             <button
               type="button"
               className={styles.iconButton}
@@ -118,6 +291,9 @@ export function CityEventsPanel() {
           </div>
         </div>
 
+        <div className={styles.hint} style={{ marginBottom: 8 }}>
+          검색결과: 총 {eventTotal}건
+        </div>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -126,20 +302,27 @@ export function CityEventsPanel() {
                 <th>유형</th>
                 <th>제목</th>
                 <th>사진</th>
-                <th>등록일</th>
-                <th>삭제</th>
+                <th>기간</th>
+                <th>작업</th>
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? (
+              {loading && events.length === 0 ? (
+                <SkeletonTableRows rows={5} columns={6} />
+              ) : events.length === 0 ? (
                 <tr>
                   <td colSpan={6} className={styles.empty}>
-                    {loading ? "불러오는 중…" : "도시정보가 없습니다."}
+                    도시정보가 없습니다.
                   </td>
                 </tr>
               ) : (
                 events.map((event) => {
                   const active = event.is_active !== "N";
+                  const status = getEventStatus(
+                    event.start_at,
+                    event.end_at,
+                    now,
+                  );
                   const focused =
                     mapFocus?.kind === "event" && mapFocus.id === event.id;
                   const rowClass = [
@@ -171,7 +354,24 @@ export function CityEventsPanel() {
                         />
                       </td>
                       <td>{event.type}</td>
-                      <td>{event.title}</td>
+                      <td>
+                        <div className={styles.eventTitleCell}>
+                          {status && (
+                            <span
+                              className={`${styles.badge} ${
+                                status === "scheduled"
+                                  ? styles.eventStatusScheduled
+                                  : status === "ongoing"
+                                    ? styles.eventStatusOngoing
+                                    : styles.eventStatusEnded
+                              }`}
+                            >
+                              {EVENT_STATUS_LABEL[status]}
+                            </span>
+                          )}
+                          <span>{event.title}</span>
+                        </div>
+                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {event.img_url ? (
                           <button
@@ -192,24 +392,43 @@ export function CityEventsPanel() {
                         )}
                       </td>
                       <td className={styles.dateCell}>
-                        {formatCreatedAt(event.created_at)}
+                        {formatDateRange(event.start_at, event.end_at)}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                          title="삭제"
-                          aria-label="삭제"
-                          onClick={() =>
-                            openDeleteConfirm({
-                              kind: "event",
-                              id: event.id,
-                              label: `${event.type} · ${event.title}`,
-                            })
-                          }
-                        >
-                          <TrashIcon />
-                        </button>
+                        {active ? (
+                          <button
+                            type="button"
+                            className={`${styles.iconButton} ${styles.iconButtonDanger}`}
+                            title="삭제"
+                            aria-label="삭제"
+                            onClick={() =>
+                              openDeleteConfirm({
+                                kind: "event",
+                                id: event.id,
+                                label: `${event.type} · ${event.title}`,
+                              })
+                            }
+                          >
+                            <TrashIcon />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            title="복구"
+                            aria-label="복구"
+                            disabled={loading}
+                            onClick={() =>
+                              openRestoreConfirm({
+                                kind: "event",
+                                id: event.id,
+                                label: `${event.type} · ${event.title}`,
+                              })
+                            }
+                          >
+                            <RestoreIcon />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

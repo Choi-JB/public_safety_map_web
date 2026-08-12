@@ -6,16 +6,18 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/store/adminStore";
 import { BackIcon } from "../shared/BackIcon";
 import styles from "../admin.module.css";
-import KakaoMap from "@/app/map/kakaoMap";
 
+
+import AdminMap from "../shared/AdminMap";
 
 export function AdminMapPanel() {
   const router = useRouter();
 
   const setMapFocus = useAdminStore((s) => s.setMapFocus);
+  const tab = useAdminStore((s) => s.tab);
 
   const backToMap = () => {
-    setMapFocus(null); 
+    setMapFocus(null);
     router.push("/map");
   };
 
@@ -31,43 +33,13 @@ export function AdminMapPanel() {
           <span>지도 화면으로 돌아가기</span>
         </button>
       </div>
-      <div className={styles.mapBody}>
-        <KakaoMap />
-        {/* {mapFocus ? (
-          <>
-            <div className={styles.mapPin} aria-hidden />
-            <div className={styles.mapFocusLabel}>
-              {mapFocus.label ?? "선택 위치"}
-            </div>
-            <div>
-              lat {mapFocus.lat.toFixed(5)}, lng {mapFocus.lng.toFixed(5)}
-            </div>
-            {mapFocus.kind === "report" && (
-              <div className={styles.mapFocusBadge}>선택됨 · 제보 #{mapFocus.id}</div>
-            )}
-            {mapFocus.kind === "feedback" && (
-              <div className={styles.mapFocusBadge}>
-                선택됨 · 피드백 #{mapFocus.id}
-              </div>
-            )}
-            {mapFocus.kind === "event" && (
-              <div className={styles.mapFocusBadge}>
-                선택됨 · 도시정보 #{mapFocus.id}
-              </div>
-            )}
-            <p className={styles.hint}>
-              지도표시팀 지도 연동 전 — 좌표 포커스 미리보기
-            </p>
-          </>
-        ) : (
-          <>
-            <div className={styles.mapPin} aria-hidden />
-            <div>좌측 지도 영역 (40%)</div>
-            <p className={styles.hint}>
-              테이블의 지도이동을 누르면 해당 좌표가 여기에 표시됩니다.
-            </p>
-          </>
-        )} */}
+      {/* 관리자 페이지에서 지도 조작 불가능 하도록 (pointerEvents 변경 시 드래그/줌 on/off) */}
+      <div  
+        className={styles.mapBody} 
+        style={{ pointerEvents: tab === "markers" ? "auto" : "none" }}
+      >
+        <AdminMap />
+
       </div>
     </section>
   );

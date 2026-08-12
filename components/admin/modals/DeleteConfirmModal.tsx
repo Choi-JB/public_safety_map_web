@@ -5,6 +5,14 @@
 import { useAdminStore } from "@/store/adminStore";
 import styles from "../admin.module.css";
 
+function WarningIcon() {
+  return (
+    <div className={styles.confirmIcon} aria-hidden>
+      <span className={styles.confirmIconMark}>!</span>
+    </div>
+  );
+}
+
 export function DeleteConfirmModal() {
   const deleteTarget = useAdminStore((s) => s.deleteTarget);
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
@@ -13,28 +21,18 @@ export function DeleteConfirmModal() {
 
   if (!deleteTarget) return null;
 
-  const isHardDelete = deleteTarget.kind === "event";
-
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true">
-      <div className={styles.modal}>
-        <div className={styles.modalTitle}>삭제 확인</div>
-        <div className={styles.modalBody}>
-          <p>
-            <strong>{deleteTarget.label}</strong> 항목을 삭제할까요?
-          </p>
-          {isHardDelete ? (
-            <p className={styles.hint}>도시정보는 목록에서 완전히 삭제됩니다.</p>
-          ) : (
-            <p className={styles.hint}>
-              소프트 삭제 — 목록에서 비활성 처리됩니다.
-            </p>
-          )}
-        </div>
-        <div className={styles.modalActions}>
+      <div className={styles.confirmModal}>
+        <WarningIcon />
+        <h2 className={styles.confirmTitle}>해당 내용을 삭제하시겠습니까?</h2>
+        <p className={styles.confirmDesc}>
+          해당 항목은 비활성화 처리 후 30일 후에 삭제됩니다.
+        </p>
+        <div className={styles.confirmActions}>
           <button
             type="button"
-            className={styles.button}
+            className={styles.confirmCancel}
             onClick={() => openDeleteConfirm(null)}
             disabled={loading}
           >
@@ -42,11 +40,11 @@ export function DeleteConfirmModal() {
           </button>
           <button
             type="button"
-            className={`${styles.button} ${styles.buttonDanger}`}
+            className={styles.confirmDelete}
             onClick={() => void confirmDelete()}
             disabled={loading}
           >
-            삭제
+            {loading ? "삭제 중…" : "삭제"}
           </button>
         </div>
       </div>

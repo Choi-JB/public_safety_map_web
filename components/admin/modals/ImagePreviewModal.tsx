@@ -13,7 +13,7 @@ export function ImagePreviewModal() {
 
   return (
     <div
-      className={styles.overlay}
+    className={`${styles.overlay} ${styles.overlayPreview}`}
       role="dialog"
       aria-modal="true"
       aria-label="제보 사진"

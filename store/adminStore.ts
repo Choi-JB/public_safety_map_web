@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import {
   createEvent,
+  createReport,
   deleteEvent,
   deleteFeedback,
   deleteReport,
@@ -9,6 +10,8 @@ import {
   fetchFeedbacks,
   fetchReports,
   fetchSummary,
+  restoreReport,
+  restoreEvent,
   updateEvent,
 } from "@/lib/api/admin";
 import type {
@@ -19,9 +22,12 @@ import type {
   AdminSummary,
   AdminTab,
   CreateEventPayload,
+  CreateReportPayload,
   DatePreset,
   DeleteTarget,
+  EventScheduleStatus,
   MapFocus,
+  RestoreTarget,
   UpdateEventPayload,
 } from "@/lib/api/admin";
 
@@ -31,6 +37,8 @@ type ReportFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
+  search_mode: "user" | "keyword";
+  search_query: string;
   page: number;
   limit: number;
 };
@@ -41,7 +49,8 @@ type FeedbackFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
-  keyword: string;
+  search_mode: "user" | "keyword";
+  search_query: string;
   page: number;
   limit: number;
 };
@@ -52,9 +61,21 @@ type EventFilters = {
   date_preset: DatePreset;
   date_from: string;
   date_to: string;
+  keyword: string;
+  status: EventScheduleStatus | "";
   page: number;
   limit: number;
 };
+
+function resolveListSearchParams(
+  mode: "user" | "keyword",
+  query: string,
+): { nickname?: string; keyword?: string } {
+  const q = query.trim();
+  if (!q) return {};
+  if (mode === "user") return { nickname: q };
+  return { keyword: q };
+}
 
 function toDateInputValue(date: Date) {
   const y = date.getFullYear();
@@ -76,6 +97,57 @@ export function getDateRangeFromPreset(preset: Exclude<DatePreset, "">) {
   };
 }
 
+/** 도시정보용: 이번 주(월~일) / 이번 달 / 올해 */
+export function getEventDateRangeFromPreset(
+  preset: Exclude<DatePreset, "">,
+) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+
+  if (preset === "this_week") {
+    const day = now.getDay(); // 0=일 … 6=토
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const from = new Date(y, m, d + mondayOffset);
+    const to = new Date(y, m, d + mondayOffset + 6);
+    return {
+      date_from: toDateInputValue(from),
+      date_to: toDateInputValue(to),
+    };
+  }
+
+  if (preset === "this_month") {
+    return {
+      date_from: toDateInputValue(new Date(y, m, 1)),
+      date_to: toDateInputValue(new Date(y, m + 1, 0)),
+    };
+  }
+
+  if (preset === "this_year") {
+    return {
+      date_from: toDateInputValue(new Date(y, 0, 1)),
+      date_to: toDateInputValue(new Date(y, 11, 31)),
+    };
+  }
+
+  // fallback: 과거 프리셋과 동일하게 오늘까지
+  return getDateRangeFromPreset(preset);
+}
+
+/** 년·월로 조회 범위 설정 (시작=해당 월 1일, 종료=해당 월 말일) */
+export function getDateRangeFromYearMonth(
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+) {
+  return {
+    date_from: toDateInputValue(new Date(fromYear, fromMonth - 1, 1)),
+    date_to: toDateInputValue(new Date(toYear, toMonth, 0)),
+  };
+}
+
 /** "전체"는 옵션 UI에서 맨 위, "기타"는 목록 맨 아래 */
 function sortTypesWithEtcLast(types: string[]) {
   const unique = Array.from(new Set(types.filter(Boolean)));
@@ -90,10 +162,15 @@ type AdminState = {
   summary: AdminSummary | null;
   reports: AdminReport[];
   reportTypes: string[];
+  reportsTotal: number;
   feedbacks: AdminFeedback[];
   feedbackSafetyFeelings: string[];
+  feedbackTotal: number;
+  recentReports: AdminReport[];
+  recentFeedbacks: AdminFeedback[];
   events: AdminCityEvent[];
   eventTypes: string[];
+  eventTotal: number;
   reportFilters: ReportFilters;
   feedbackFilters: FeedbackFilters;
   eventFilters: EventFilters;
@@ -103,6 +180,7 @@ type AdminState = {
   selectedEvent: AdminCityEvent | null;
   previewImageUrl: string | null;
   deleteTarget: DeleteTarget | null;
+  restoreTarget: RestoreTarget | null;
   loading: boolean;
   error: string | null;
   message: string | null;
@@ -119,6 +197,7 @@ type AdminState = {
   openEventDetail: (event: AdminCityEvent | null) => void;
   openImagePreview: (url: string | null) => void;
   openDeleteConfirm: (target: DeleteTarget | null) => void;
+  openRestoreConfirm: (target: RestoreTarget | null) => void;
   clearNotice: () => void;
   resetReportFilters: () => void;
   resetFeedbackFilters: () => void;
@@ -128,13 +207,19 @@ type AdminState = {
   loadSummary: () => Promise<void>;
   loadReports: () => Promise<void>;
   loadFeedbacks: () => Promise<void>;
+  loadRecentActivity: () => Promise<void>;
   loadEvents: () => Promise<void>;
   confirmDelete: () => Promise<void>;
+  confirmRestore: () => Promise<void>;
+  restoreReportById: (id: string | number) => Promise<void>;
+  restoreEventById: (id: string | number) => Promise<void>;
+  submitReport: (payload: CreateReportPayload) => Promise<boolean>;
   submitCityEvent: (payload: CreateEventPayload) => Promise<void>;
   updateCityEvent: (payload: UpdateEventPayload) => Promise<boolean>;
 };
 
 const initialDateRange = getDateRangeFromPreset("1m");
+const initialEventDateRange = getEventDateRangeFromPreset("this_month");
 
 const defaultReportFilters: ReportFilters = {
   type: "",
@@ -142,6 +227,8 @@ const defaultReportFilters: ReportFilters = {
   date_preset: "1m",
   date_from: initialDateRange.date_from,
   date_to: initialDateRange.date_to,
+  search_mode: "keyword",
+  search_query: "",
   page: 1,
   limit: 10,
 };
@@ -152,7 +239,8 @@ const defaultFeedbackFilters: FeedbackFilters = {
   date_preset: "1m",
   date_from: initialDateRange.date_from,
   date_to: initialDateRange.date_to,
-  keyword: "",
+  search_mode: "keyword",
+  search_query: "",
   page: 1,
   limit: 10,
 };
@@ -160,9 +248,11 @@ const defaultFeedbackFilters: FeedbackFilters = {
 const defaultEventFilters: EventFilters = {
   type: "",
   filter: "active",
-  date_preset: "1m",
-  date_from: initialDateRange.date_from,
-  date_to: initialDateRange.date_to,
+  date_preset: "this_month",
+  date_from: initialEventDateRange.date_from,
+  date_to: initialEventDateRange.date_to,
+  keyword: "",
+  status: "",
   page: 1,
   limit: 10,
 };
@@ -172,10 +262,15 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   summary: null,
   reports: [],
   reportTypes: [],
+  reportsTotal: 0,
   feedbacks: [],
   feedbackSafetyFeelings: [],
+  feedbackTotal: 0,
+  recentReports: [],
+  recentFeedbacks: [],
   events: [],
   eventTypes: [],
+  eventTotal: 0,
   reportFilters: defaultReportFilters,
   feedbackFilters: defaultFeedbackFilters,
   eventFilters: defaultEventFilters,
@@ -185,6 +280,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   selectedEvent: null,
   previewImageUrl: null,
   deleteTarget: null,
+  restoreTarget: null,
   loading: false,
   error: null,
   message: null,
@@ -240,7 +336,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }));
       return;
     }
-    const range = getDateRangeFromPreset(preset);
+    const range = getEventDateRangeFromPreset(preset);
     set((s) => ({
       eventFilters: {
         ...s.eventFilters,
@@ -256,6 +352,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   openEventDetail: (selectedEvent) => set({ selectedEvent }),
   openImagePreview: (previewImageUrl) => set({ previewImageUrl }),
   openDeleteConfirm: (deleteTarget) => set({ deleteTarget }),
+  openRestoreConfirm: (restoreTarget) => set({ restoreTarget }),
   clearNotice: () => set({ error: null, message: null }),
   resetReportFilters: () => {
     const range = getDateRangeFromPreset("1m");
@@ -266,6 +363,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         date_preset: "1m",
         date_from: range.date_from,
         date_to: range.date_to,
+        search_mode: "keyword",
+        search_query: "",
         page: 1,
         limit: 10,
       },
@@ -280,21 +379,24 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         date_preset: "1m",
         date_from: range.date_from,
         date_to: range.date_to,
-        keyword: "",
+        search_mode: "keyword",
+        search_query: "",
         page: 1,
         limit: 10,
       },
     });
   },
   resetEventFilters: () => {
-    const range = getDateRangeFromPreset("1m");
+    const range = getEventDateRangeFromPreset("this_month");
     set({
       eventFilters: {
         type: "",
         filter: "active",
-        date_preset: "1m",
+        date_preset: "this_month",
         date_from: range.date_from,
         date_to: range.date_to,
+        keyword: "",
+        status: "",
         page: 1,
         limit: 10,
       },
@@ -318,12 +420,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const { reportFilters } = get();
     set({ loading: true, error: null });
     try {
-      const { reports, types } = await fetchReports({
+      const search = resolveListSearchParams(
+        reportFilters.search_mode,
+        reportFilters.search_query,
+      );
+      const { reports, types, total } = await fetchReports({
         page: reportFilters.page,
         limit: reportFilters.limit,
         filter: reportFilters.filter,
-        date_from: reportFilters.date_from || undefined,
-        date_to: reportFilters.date_to || undefined,
+        date_from: `${reportFilters.date_from} 00:00:00.000` || undefined,
+        date_to: `${reportFilters.date_to} 23:59:59.999` || undefined,
+        ...search,
       });
       const filtered = reportFilters.type
         ? reports.filter((r) => r.type === reportFilters.type)
@@ -331,6 +438,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         reports: filtered,
         reportTypes: sortTypesWithEtcLast(types),
+        reportsTotal: total,
         loading: false,
       });
     } catch (e) {
@@ -345,12 +453,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const { feedbackFilters, feedbackSafetyFeelings } = get();
     set({ loading: true, error: null });
     try {
-      const feedbacks = await fetchFeedbacks({
+      const search = resolveListSearchParams(
+        feedbackFilters.search_mode,
+        feedbackFilters.search_query,
+      );
+      const { feedbacks, total } = await fetchFeedbacks({
         page: feedbackFilters.page,
         limit: feedbackFilters.limit,
         filter: feedbackFilters.filter,
         date_from: feedbackFilters.date_from || undefined,
         date_to: feedbackFilters.date_to || undefined,
+        ...search,
       });
       const filtered = feedbacks.filter((f) => {
         if (
@@ -358,11 +471,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           f.safety_feeling !== feedbackFilters.safety_feeling
         ) {
           return false;
-        }
-        if (feedbackFilters.keyword) {
-          const q = feedbackFilters.keyword.toLowerCase();
-          const hay = `${f.comment} ${f.user?.nickname ?? ""}`.toLowerCase();
-          if (!hay.includes(q)) return false;
         }
         return true;
       });
@@ -376,6 +484,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         feedbacks: filtered,
         feedbackSafetyFeelings: nextFeelings,
+        feedbackTotal: total,
         loading: false,
       });
     } catch (e) {
@@ -386,16 +495,31 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     }
   },
 
+  loadRecentActivity: async () => {
+    try {
+      const [{ reports }, {feedbacks}] = await Promise.all([
+        fetchReports({ page: 1, limit: 5, filter: "active" }),
+        fetchFeedbacks({ page: 1, limit: 5, filter: "active" }),
+      ]);
+      set({ recentReports: reports, recentFeedbacks: feedbacks });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : "최근 활동 조회 실패" });
+    }
+  },
+
   loadEvents: async () => {
     const { eventFilters } = get();
     set({ loading: true, error: null });
     try {
-      const { events, types } = await fetchEvents({
+      const keyword = eventFilters.keyword.trim() || undefined;
+      const { events, types, total } = await fetchEvents({
         page: eventFilters.page,
         limit: eventFilters.limit,
         filter: eventFilters.filter,
         date_from: eventFilters.date_from || undefined,
         date_to: eventFilters.date_to || undefined,
+        keyword,
+        status: eventFilters.status || undefined,
       });
       const filtered = eventFilters.type
         ? events.filter((e) => e.type === eventFilters.type)
@@ -404,6 +528,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({
         events: filtered,
         eventTypes: types,
+        eventTotal: total,
         selectedEvent: selectedId
           ? (filtered.find((e) => e.id === selectedId) ??
             events.find((e) => e.id === selectedId) ??
@@ -450,7 +575,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         set({
           deleteTarget: null,
           selectedEvent: null,
-          message: "도시정보가 삭제되었습니다.",
+          message: "도시정보가 비활성 처리되었습니다.",
           loading: false,
         });
         await get().loadEvents();
@@ -461,6 +586,75 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         loading: false,
         error: e instanceof Error ? e.message : "삭제에 실패했습니다.",
       });
+    }
+  },
+
+  restoreReportById: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await restoreReport(Number(id));
+      set({
+        loading: false,
+        restoreTarget: null,
+        message: "제보가 복구되었습니다.",
+      });
+      await get().loadReports();
+      await get().loadSummary();
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "복구에 실패했습니다.",
+      });
+    }
+  },
+
+  restoreEventById: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await restoreEvent(Number(id));
+      set({
+        loading: false,
+        restoreTarget: null,
+        message: "도시정보가 복구되었습니다.",
+      });
+      await get().loadEvents();
+      await get().loadSummary();
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "복구에 실패했습니다.",
+      });
+    }
+  },
+
+  confirmRestore: async () => {
+    const { restoreTarget } = get();
+    if (!restoreTarget) return;
+    if (restoreTarget.kind === "report") {
+      await get().restoreReportById(restoreTarget.id);
+    } else {
+      await get().restoreEventById(restoreTarget.id);
+    }
+  },
+
+  submitReport: async (payload) => {
+    set({ loading: true, error: null });
+    try {
+      await createReport(payload);
+      set({
+        loading: false,
+        message: "제보가 등록되었습니다.",
+        tab: "reports",
+      });
+      await get().loadReports();
+      await get().loadSummary();
+      return true;
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : "제보 등록에 실패했습니다.",
+      });
+      return false;
     }
   },
 

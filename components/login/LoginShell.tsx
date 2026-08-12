@@ -7,7 +7,7 @@ import styles from "./login.module.css";
 
 export function LoginShell() {
   return (
-    <main className={styles.page}>
+     <main className={styles.page}>
       <LoginForm />
     </main>
   );

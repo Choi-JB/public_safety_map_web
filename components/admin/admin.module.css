@@ -1,10 +1,10 @@
 /* 담당: 피드백/관리자팀 — 관리자 페이지 전용 스타일 */
 
 .shell {
-  --admin-bg: #eef1f4;
+  --admin-bg: #f4f6f9;
   --admin-surface: #ffffff;
-  --admin-border: #cfd6de;
-  --admin-text: #243041;
+  --admin-border: #e2e6ec;
+  --admin-text: #1f2937;
   --admin-muted: #6b7785;
   --admin-accent: #2f5d7c;
   --admin-accent-soft: #e7eef3;
@@ -12,7 +12,14 @@
   --admin-warn: #8a6a2f;
   --admin-ok: #2f6b4f;
   --admin-inactive: #f0f2f4;
-  min-height: 100vh;
+  --admin-shadow: 0 1px 2px rgba(31, 41, 55, 0.04), 0 6px 16px rgba(31, 41, 55, 0.06);
+  position: fixed;
+  inset: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--admin-bg);
   color: var(--admin-text);
   font-family: "Segoe UI", "Noto Sans KR", sans-serif;
@@ -30,6 +37,7 @@
   gap: 16px;
   padding: 0 20px;
   height: 56px;
+  flex-shrink: 0;
   background: var(--admin-surface);
   border-bottom: 1px solid var(--admin-border);
 }
@@ -53,9 +61,22 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-surface);
   color: var(--admin-text);
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.button:hover:not(:disabled),
+.iconButton:hover:not(:disabled) {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background: #274d67;
+  border-color: #274d67;
+  color: #fff;
 }
 
 .tab {
@@ -87,21 +108,31 @@
   grid-template-columns: 40% 60%;
   gap: 16px;
   padding: 16px;
-  min-height: calc(70vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
+
+.bodyCompactMap {
+  grid-template-columns: 25% 75%;
+}
+
 
 .mapCard,
 .panelCard {
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
-  border-radius: 8px;
-  min-height: calc(100vh - 44px);
+  border-radius: 12px;
+  box-shadow: var(--admin-shadow);
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 .mapCard {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
 }
 
 .mapHeader,
@@ -109,6 +140,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid var(--admin-border);
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .mapBackButton {
@@ -129,7 +161,12 @@
 }
 
 .mapBody {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
   flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
   background:
@@ -172,11 +209,31 @@
 .panelCard {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.panelRoot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .panelBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 16px;
+  overflow: hidden;
+}
+
+.panelBodyScroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  padding: 16px;
 }
 
 .notice {
@@ -206,9 +263,41 @@
 
 .statCard {
   border: 1px solid var(--admin-border);
-  border-radius: 6px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 20px;
   background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.statCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.statIconBadge {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.statIconBlue {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+}
+
+.statIconGreen {
+  background: rgba(47, 107, 79, 0.12);
+  color: var(--admin-ok);
+}
+
+.statIconAmber {
+  background: rgba(138, 106, 47, 0.12);
+  color: var(--admin-warn);
 }
 
 .statLabel {
@@ -217,7 +306,7 @@
 }
 
 .statValue {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -233,6 +322,7 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .filterRow {
@@ -240,6 +330,139 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   align-items: end;
+}
+
+/* 필터 줄 셀렉트: 고정 min-width 대신 선택지 길이에 맞춤 */
+.filterRow .field {
+  min-width: 0;
+  width: max-content;
+}
+
+.filterRow .dateInputField {
+  width: calc(30px + 10ch + 16px);
+  min-width: calc(30px + 10ch + 16px);
+  max-width: calc(30px + 10ch + 16px);
+}
+
+.filterRow .field > select {
+  width: auto;
+  field-sizing: content;
+  max-width: 12rem;
+}
+
+.yearMonthRange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.yearMonthRange select {
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 6px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.yearSelect {
+  width: 5.5rem;
+  min-width: 0;
+}
+
+.monthSelect {
+  width: 3.6rem;
+  min-width: 0;
+  padding-left: 4px;
+  padding-right: 2px;
+}
+
+.yearMonthSep {
+  color: var(--admin-muted);
+  font-size: 13px;
+  padding: 0 2px;
+}
+
+.searchQueryRow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.searchQueryRow select {
+  flex: 0 0 auto;
+  width: auto;
+  field-sizing: content;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 6px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.searchQueryRow input {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.searchQueryRow .iconInput {
+  flex: 1;
+  min-width: 140px;
+}
+
+.authorNicknameWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.authorNickname {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.authorNickname:hover {
+  text-decoration: underline;
+}
+
+.authorMenu {
+  position: fixed;
+  z-index: 80;
+  min-width: 72px;
+  background: #fff;
+  border: 1px solid #8a8a8a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.authorMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: #fff;
+  color: var(--admin-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.authorMenuItem:hover {
+  background: #f3f5f7;
 }
 
 .field {
@@ -255,42 +478,65 @@
   font-size: 12px;
 }
 
-.checkGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 0;
-}
-
-.checkItem {
+.filterPillGroup {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--admin-text);
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
+  min-height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--admin-surface);
 }
 
-.checkItem input {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  accent-color: var(--admin-accent);
+.filterPill {
+  border: none;
+  border-right: 1px solid var(--admin-border);
+  background: transparent;
+  color: var(--admin-muted);
+  border-radius: 0;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.filterPill:last-child {
+  border-right: none;
+}
+
+.filterPill:hover {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+}
+
+.filterPillActive,
+.filterPillActive:hover {
+  background: var(--admin-accent);
+  color: #fff;
+  font-weight: 600;
 }
 
 .field input,
 .field select,
 .field textarea {
   border: 1px solid var(--admin-border);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 8px 10px;
   font: inherit;
   background: #fff;
   color: var(--admin-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-accent-soft);
 }
 
 .field textarea {
@@ -327,6 +573,11 @@
   padding: 0;
 }
 
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .iconButtonDanger:hover {
   background: var(--admin-danger);
   border-color: var(--admin-danger);
@@ -335,7 +586,9 @@
 
 .tableWrap {
   border: 1px solid var(--admin-border);
-  border-radius: 6px;
+  border-radius: 10px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -357,6 +610,9 @@
   color: var(--admin-muted);
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .rowInactive {
@@ -465,10 +721,11 @@
 
 .badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
   border: 1px solid var(--admin-border);
   font-size: 12px;
+  font-weight: 600;
 }
 
 .badgeSafe {
@@ -489,12 +746,42 @@
   color: var(--admin-danger);
 }
 
+.eventTitleCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eventTitleCell .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.eventStatusScheduled {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.eventStatusOngoing {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.eventStatusEnded {
+  background: #e5e7eb;
+  border-color: #cbd5e1;
+  color: #4b5563;
+}
+
 .pagination {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+  flex-shrink: 0;
 }
 
 .formGrid {
@@ -513,6 +800,248 @@
   margin-top: 8px;
 }
 
+.markerTabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.markerTab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--admin-muted);
+  padding: 8px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.markerTabActive {
+  color: var(--admin-accent);
+  border-bottom-color: var(--admin-accent);
+  font-weight: 600;
+}
+
+.imageAttachRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.imagePreviewBox {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f7f9fb;
+  flex-shrink: 0;
+}
+
+.imagePreviewBox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.imagePreviewClear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(36, 48, 65, 0.7);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.imagePreviewEmpty {
+  width: 72px;
+  height: 72px;
+  border: 1px dashed var(--admin-border);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--admin-muted);
+  font-size: 11px;
+  text-align: center;
+  padding: 4px;
+  background: #fafbfc;
+  flex-shrink: 0;
+}
+
+.coordRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.gridIdField {
+  min-width: 0;
+  width: calc(6ch + 22px);
+}
+
+.gridIdField input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.markerSearchRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.markerSearchRow > label {
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+
+.markerSearchInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.markerSearchInputRow input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+
+.markerSearchInputRow button {
+  flex-shrink: 0;
+}
+
+.markerScheduleRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.scheduleLine {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.scheduleLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.dateInputField {
+  width: calc(30px + 10ch + 16px);
+  min-width: calc(30px + 10ch + 16px);
+  max-width: calc(30px + 10ch + 16px);
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+.dateInputField .iconInput {
+  width: 100%;
+}
+
+.dateInputField .iconInputBtn {
+  width: 30px;
+}
+
+.dateTextInput {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  padding: 6px 6px !important;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+}
+
+.iconInput {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iconInputBtn {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  border: none;
+  border-right: 1px solid var(--admin-border);
+  background: #f7f9fb;
+  color: var(--admin-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.iconInputBtn:hover {
+  background: var(--admin-accent-soft);
+}
+
+.iconInputBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconInputDisabled {
+  background: #f5f7f9;
+}
+
+.iconInputField {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--admin-text);
+  background: transparent;
+}
+
+.hiddenPicker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hint {
   color: var(--admin-muted);
   font-size: 12px;
@@ -527,13 +1056,100 @@
   z-index: 50;
   padding: 16px;
 }
+.overlayPreview {
+  z-index: 60;
+}
+
+.confirmModal {
+  width: min(360px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(36, 48, 65, 0.18);
+}
+
+.confirmIcon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #fde8e8;
+  display: grid;
+  place-items: center;
+}
+
+.confirmIconMark {
+  color: #e5484d;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.confirmTitle {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.confirmDesc {
+  margin: 0 0 24px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4a5563;
+}
+
+.confirmActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirmCancel,
+.confirmDelete,
+.confirmRestore {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.confirmCancel {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #243041;
+}
+
+.confirmDelete {
+  border: 1px solid #ff4d4f;
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.confirmRestore {
+  border: 1px solid #1890ff;
+  background: #1890ff;
+  color: #fff;
+}
+
+.confirmCancel:disabled,
+.confirmDelete:disabled,
+.confirmRestore:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 .modal {
   width: min(560px, 100%);
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px;
+  box-shadow: 0 12px 40px rgba(31, 41, 55, 0.18);
 }
 
 .modalTitle {
@@ -595,14 +1211,33 @@
   color: var(--admin-muted);
 }
 
+.skeleton {
+  display: inline-block;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e8ebef 25%, #f2f4f7 37%, #e8ebef 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @media (max-width: 960px) {
   .body {
     grid-template-columns: 1fr;
+    overflow: auto;
   }
 
   .mapCard,
   .panelCard {
     min-height: 320px;
+    height: auto;
   }
 
   .cards {
@@ -610,6 +1245,10 @@
   }
 
   .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .coordRow {
     grid-template-columns: 1fr;
   }
 }
