@@ -11,6 +11,7 @@ import type {
   ReportItem,
   AccidentZoneType,
   AccidentZonesData,
+  AccidentZoneItem,
 } from "@/lib/api/types";
 
 import { loadKakaoMap } from "./loadkakaoMap";
@@ -106,6 +107,7 @@ export default function KakaoMap() {
   const accidentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAccidentRegionRef = useRef<string | null>(null);
   const accidentPolygonsRef = useRef<any[]>([]);
+  const accidentRawRef = useRef<AccidentZoneItem[]>([]);
 
   const setBounds = useMapStore((s) => s.setBounds);
   const bounds = useMapStore((s) => s.bounds);
@@ -698,16 +700,16 @@ export default function KakaoMap() {
     };
     if (!mapRef.current || !kakaoRef.current) return;
 
-const level = mapRef.current.getLevel();
+    const level = mapRef.current.getLevel();
 
-if (level >= ACCIDENT_HIDE_MIN_LEVEL) {
-  clearDebounce();
-  clearPolys();
-  setAccidentZones([]);
-  lastAccidentRegionRef.current = null;
-  return;
-}
-
+    if (level >= ACCIDENT_HIDE_MIN_LEVEL) {
+      clearDebounce();
+      clearPolys();
+      setAccidentZones([]);
+      lastAccidentRegionRef.current = null;
+      accidentRawRef.current = [] 
+      return;
+    }
 
     // OFF → 폴리곤·디바운스·구 키 초기화
     if (!accidentZonesVisible) {
@@ -719,87 +721,108 @@ if (level >= ACCIDENT_HIDE_MIN_LEVEL) {
     }
 
     let cancelled = false;
-
     clearDebounce();
-    accidentDebounceRef.current = setTimeout(() => {
-      void (async () => {
-        try {
-          const kakao = kakaoRef.current;
-          const map = mapRef.current;
-          if (!kakao || !map || cancelled) return;
 
-          const center = map.getCenter();
-          const lat = center.getLat();
-          const lng = center.getLng();
+    const applyFromRaw = (kakao: any, map: any, lat: number, lng: number) => {
+      const typeSet = new Set(visibleAccidentTypes);
+      let items = accidentRawRef.current.filter((it) => typeSet.has(it.type));
+      items = items.filter(
+        (z) =>
+          z.lat != null &&
+          z.lng != null &&
+          distKm(lat, lng, z.lat, z.lng) <= CENTER_EVENT_RADIUS_KM
+      );
 
-          const region = await coordToSiDoGuGun(kakao, lat, lng);
-          if (cancelled) return;
-          if (!region) {
-            console.warn("[accident-zones] region code 실패");
-            clearPolys();
-            setAccidentZones([]);
-            return;
-          }
+      setAccidentZones(items);
+      clearPolys();
+      for (const z of items) {
+        if (!z.path || z.path.length < 3) continue;
+        const path = z.path.map(
+          (p: { lat: number; lng: number }) => new kakao.maps.LatLng(p.lat, p.lng)
+        );
+        const color = accidentColor(z.type);
+        const poly = new kakao.maps.Polygon({
+          map,
+          path,
+          strokeWeight: 2,
+          strokeColor: color,
+          strokeOpacity: 0.9,
+          fillColor: color,
+          fillOpacity: 0.25,
+          zIndex: 2,
+        });
+        accidentPolygonsRef.current.push(poly);
+      }
+    };
 
-          const regionKey = `${region.siDo}|${region.guGun}`;
+    const loadRegionAndApply = async () => {
+      const kakao = kakaoRef.current;
+      const map = mapRef.current;
+      if (!kakao || !map || cancelled) return;
 
-          // 같은 구 → 재호출 안 함 (폴리곤 유지)
-          if (lastAccidentRegionRef.current === regionKey) {
-            return;
-          }
+      const center = map.getCenter();
+      const lat = center.getLat();
+      const lng = center.getLng();
 
-          const q = new URLSearchParams({
-            siDo: region.siDo,
-            guGun: region.guGun,
-          });
-          const data = await get<AccidentZonesData>(`/accident-zones?${q}`);
-          if (cancelled) return;
+      const region = await coordToSiDoGuGun(kakao, lat, lng);
+      if (cancelled) return;
+      if (!region) {
+        console.warn("[accident-zones] region code 실패");
+        clearPolys();
+        setAccidentZones([]);
+        return;
+      }
 
-          const typeSet = new Set(visibleAccidentTypes);
-          let items = (data?.items ?? []).filter((it) => typeSet.has(it.type));
+      const regionKey = `${region.siDo}|${region.guGun}`;
+      const sameRegion = lastAccidentRegionRef.current === regionKey;
 
-          // 구 전체 보려면 아래 10km 필터 삭제 권장
-          items = items.filter(
-            (z) =>
-              z.lat != null &&
-              z.lng != null &&
-              distKm(lat, lng, z.lat, z.lng) <= CENTER_EVENT_RADIUS_KM
-          );
+      // 같은 구 + raw 있음 → 타입 토글 등: 즉시 다시 그리기 (2초 없음)
+      if (sameRegion && accidentRawRef.current.length > 0) {
+        applyFromRaw(kakao, map, lat, lng);
+        return;
+      }
 
-          setAccidentZones(items);
-          clearPolys();
+      // 구 변경 / 첫 로드 → 2초 뒤 API
+      accidentDebounceRef.current = setTimeout(() => {
+        void (async () => {
+          try {
+            const kakao2 = kakaoRef.current;
+            const map2 = mapRef.current;
+            if (!kakao2 || !map2 || cancelled) return;
 
-          for (const z of items) {
-            if (!z.path || z.path.length < 3) continue;
-            const path = z.path.map(
-              (p) => new kakao.maps.LatLng(p.lat, p.lng)
-            );
-            const color = accidentColor(z.type);
-            const poly = new kakao.maps.Polygon({
-              map,
-              path,
-              strokeWeight: 2,
-              strokeColor: color,
-              strokeOpacity: 0.9,
-              fillColor: color,
-              fillOpacity: 0.25,
-              zIndex: 2,
+            const c2 = map2.getCenter();
+            const lat2 = c2.getLat();
+            const lng2 = c2.getLng();
+
+            const region2 = await coordToSiDoGuGun(kakao2, lat2, lng2);
+            if (cancelled || !region2) return;
+
+            const key2 = `${region2.siDo}|${region2.guGun}`;
+            const q = new URLSearchParams({
+              siDo: region2.siDo,
+              guGun: region2.guGun,
             });
-            accidentPolygonsRef.current.push(poly);
-          }
+            const data = await get<AccidentZonesData>(`/accident-zones?${q}`);
+            if (cancelled) return;
 
-          lastAccidentRegionRef.current = regionKey;
-        } catch (error) {
-          console.error("[accident-zones]", error);
-        }
-      })();
-    }, ACCIDENT_REGION_DEBOUNCE_MS);
+            accidentRawRef.current = data?.items ?? [];
+            lastAccidentRegionRef.current = key2;
+            applyFromRaw(kakao2, map2, lat2, lng2);
+          } catch (error) {
+            console.error("[accident-zones]", error);
+          }
+        })();
+      }, ACCIDENT_REGION_DEBOUNCE_MS);
+    };
+
+    void loadRegionAndApply();
 
     return () => {
       cancelled = true;
       clearDebounce();
     };
-  }, [
+  }, 
+  [
     bounds,
     accidentZonesVisible,
     visibleAccidentTypes,
