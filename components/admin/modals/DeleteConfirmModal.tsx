@@ -18,6 +18,7 @@ export function DeleteConfirmModal() {
   const openDeleteConfirm = useAdminStore((s) => s.openDeleteConfirm);
   const confirmDelete = useAdminStore((s) => s.confirmDelete);
   const loading = useAdminStore((s) => s.loading);
+  const tab = useAdminStore((s) => s.tab);
 
   if (!deleteTarget) return null;
 
@@ -25,9 +26,18 @@ export function DeleteConfirmModal() {
     <div className={styles.overlay} role="dialog" aria-modal="true">
       <div className={styles.confirmModal}>
         <WarningIcon />
-        <h2 className={styles.confirmTitle}>해당 내용을 삭제하시겠습니까?</h2>
+        <h2 className={styles.confirmTitle}>해당 내용이 지도에서 비활성화됩니다.</h2>
         <p className={styles.confirmDesc}>
-          해당 항목은 비활성화 처리 후 30일 후에 삭제됩니다.
+          {tab === "reports" ? (
+            <span>
+              (제보는 등록 24시간 후 자동 비활성화되며<br />
+              7일 후 DB에서 자동 삭제됩니다.)
+            </span>
+          ) : (
+            <span>
+              
+            </span>
+          )}
         </p>
         <div className={styles.confirmActions}>
           <button

@@ -103,6 +103,28 @@ const actionBtnStyle: CSSProperties = {
   lineHeight: 1,
 };
 
+/** 현위치(십자 조준) 아이콘 */
+function LocationCrosshairIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="5.5" stroke="#6b7280" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="1.6" fill="#6b7280" />
+      <path
+        d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2"
+        stroke="#6b7280"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 
 type MapControlsProps = {
   adminMode?: boolean;
@@ -117,6 +139,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
   const [query, setQuery] = useState("");
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [gridOpen, setGridOpen] = useState(false);
+  const [locationHover, setLocationHover] = useState(false);
 
   const [accidentOpen, setAccidentOpen] = useState(false);
 
@@ -191,15 +214,71 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
         </button>
       </div>
 
-      {/* 내 위치 */}
-      <div style={chipStyle}>
+      {/* 현위치 */}
+      <div
+        style={{ position: "relative", display: "flex", alignItems: "center" }}
+        onMouseEnter={() => setLocationHover(true)}
+        onMouseLeave={() => setLocationHover(false)}
+      >
         <button
           type="button"
           onClick={() => moveToCurrentLocation?.()}
-          style={actionBtnStyle}
+          aria-label="현위치"
+          style={{
+            width: 36,
+            height: 36,
+            padding: 0,
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            background: "#fff",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxSizing: "border-box",
+          }}
         >
-          내 위치
+          <LocationCrosshairIcon />
         </button>
+        {locationHover && (
+          <div
+            role="tooltip"
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              marginTop: 8,
+              padding: "6px 10px",
+              background: "#374151",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 500,
+              borderRadius: 6,
+              whiteSpace: "nowrap",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+              pointerEvents: "none",
+              zIndex: 20,
+            }}
+          >
+            현위치
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: -5,
+                left: "50%",
+                width: 0,
+                height: 0,
+                transform: "translateX(-50%)",
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderBottom: "5px solid #374151",
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* 주변 → 표시 on/off + 타입 토글 */}

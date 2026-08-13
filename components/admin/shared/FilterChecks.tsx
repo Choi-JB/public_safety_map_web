@@ -27,8 +27,8 @@ export const EVENT_DATE_PRESETS: {
 ];
 
 const ACTIVE_OPTIONS: { value: ActiveFilter; label: string }[] = [
-  { value: "active", label: "활성" },
-  { value: "inactive", label: "비활성" },
+  { value: "active", label: "표시" },
+  { value: "inactive", label: "숨김" },
   { value: "all", label: "전체" },
 ];
 
@@ -90,11 +90,11 @@ export function ActiveFilterChecks({
 }: ActiveFilterChecksProps) {
   return (
     <div className={styles.field}>
-      <span className={styles.fieldLabel}>활성여부</span>
+      <span className={styles.fieldLabel}>지도에 표시여부</span>
       <div
         className={styles.filterPillGroup}
         role="group"
-        aria-label="활성여부"
+        aria-label="지도에 표시여부"
       >
         {ACTIVE_OPTIONS.map((option) => {
           const active = value === option.value;
