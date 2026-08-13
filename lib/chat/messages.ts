@@ -580,25 +580,27 @@ export async function markRoomAsReadForAdmin(
 ): Promise<void> {
   const uid = adminUserId.trim();
   if (!roomId || !uid) return;
-
   await ensureChatUser(uid, adminNickname.trim());
-
   const supabase = createClient();
   const now = new Date().toISOString();
-
   const { data: existing } = await supabase
     .from("room_participants")
     .select("idx")
     .eq("rooms_id", roomId)
     .eq("user_id", uid)
     .maybeSingle();
-
   if (existing) {
     await supabase
       .from("room_participants")
       .update({ last_read_at: now })
       .eq("rooms_id", roomId)
       .eq("user_id", uid);
+  } else {
+    await supabase.from("room_participants").insert({
+      rooms_id: roomId,
+      user_id: uid,
+      last_read_at: now,
+    });
   }
 }
 
