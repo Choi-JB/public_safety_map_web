@@ -87,7 +87,9 @@ function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
+function infraQueryKey(lat: number, lng: number, radius_m: number) {
+  return `${lat.toFixed(5)}|${lng.toFixed(5)}|${radius_m}`;
+}
 
 export default function KakaoMap() {
   const setMapActions = useMapStore((s) => s.setMapActions);
@@ -103,6 +105,9 @@ export default function KakaoMap() {
   const hoverReqIdRef = useRef(0);
   const markersRef = useRef<any[]>([]);
   const infraCircleRef = useRef<any>(null);
+  //infra
+  const infraRawRef = useRef<InfrastructureItem[]>([]);
+  const lastInfraKeyRef = useRef<string | null>(null);
   //accident
   const accidentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAccidentRegionRef = useRef<string | null>(null);
@@ -156,7 +161,7 @@ export default function KakaoMap() {
       map,
       position,
       title: "내 위치",
-      image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파란
+      image: createPinImage(kakao, MARKER_COLORS.me), // 내위치 — 파랑
     });
   };
 
@@ -594,6 +599,7 @@ export default function KakaoMap() {
   }, [bounds, setReports, setReportsLoading]);
 
   // 3) 지도 중심+반경 → 인프라 마커 (격자 비종속)
+  //    같은 키면 API 없이 타입만 필터해서 다시 그림
   useEffect(() => {
     const clearInfra = () => {
       markersRef.current.forEach((m) => m.setMap(null));
@@ -609,71 +615,77 @@ export default function KakaoMap() {
       return;
     }
 
-    // 전체 OFF → API 없이 마커·원 전부 제거
+    // 전체 OFF → API 없이 마커·원만 제거 (raw·키는 유지 → 다시 ON 시 재조회 없음)
     if (!infraVisible) {
       clearInfra();
       setInfrastructures([]);
       return;
     }
 
+    const kakao = kakaoRef.current;
+    const map = mapRef.current;
+    const center = map.getCenter();
+    const lat = center.getLat();
+    const lng = center.getLng();
+    const radius_m = levelToRadiusM(map.getLevel());
+    const key = infraQueryKey(lat, lng, radius_m);
+
+    const applyFromRaw = () => {
+      const typeSet = new Set(visibleInfraTypes);
+      const filtered = infraRawRef.current.filter(
+        (item) => item.type != null && typeSet.has(item.type as InfraType)
+      );
+
+      setInfrastructures(filtered);
+      clearInfra();
+
+      filtered.forEach((item) => {
+        if (item.lat == null || item.lng == null) return;
+        const marker = new kakao.maps.Marker({
+          map,
+          position: new kakao.maps.LatLng(item.lat, item.lng),
+          title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
+          image: createInfraImage(kakao, item.type),
+        });
+        markersRef.current.push(marker);
+      });
+
+      if (DEBUG_INFRA_RANGE_CIRCLE) {
+        infraCircleRef.current = new kakao.maps.Circle({
+          map,
+          center: new kakao.maps.LatLng(lat, lng),
+          radius: radius_m,
+          strokeWeight: 2,
+          strokeColor: "#16a34a",
+          strokeOpacity: 0.7,
+          strokeStyle: "dashed",
+          fillColor: "#16a34a",
+          fillOpacity: 0,
+        });
+      }
+    };
+
+    // 타입 토글·같은 자리 ON → 재호출 없음
+    if (lastInfraKeyRef.current === key) {
+      applyFromRaw();
+      return;
+    }
+
     let cancelled = false;
-
-    (async () => {
+    void (async () => {
       try {
-        const kakao = kakaoRef.current;
-        const map = mapRef.current;
-        const center = map.getCenter();
-        const lat = center.getLat();
-        const lng = center.getLng();
-        const level = map.getLevel();
-        const radius_m = levelToRadiusM(level);
-
         const params = new URLSearchParams({
           lat: String(lat),
           lng: String(lng),
           radius_m: String(radius_m),
         });
-
         const items = await get<InfrastructureItem[]>(
           `/infrastructures?${params}`
         );
         if (cancelled) return;
-
-        const typeSet = new Set(visibleInfraTypes);
-        const filtered = items.filter(
-          (item) => item.type != null && typeSet.has(item.type as InfraType)
-        );
-
-        setInfrastructures(filtered);
-
-        clearInfra();
-
-        filtered.forEach((item) => {
-          if (item.lat == null || item.lng == null) return;
-
-          const marker = new kakao.maps.Marker({
-            map,
-            position: new kakao.maps.LatLng(item.lat, item.lng),
-            title: `${item.type ?? ""} ${item.address ?? ""}`.trim(),
-            image: createInfraImage(kakao, item.type),
-          });
-          markersRef.current.push(marker);
-        });
-
-        // DEBUG: 조회 반경 원
-        if (DEBUG_INFRA_RANGE_CIRCLE) {
-          infraCircleRef.current = new kakao.maps.Circle({
-            map,
-            center: new kakao.maps.LatLng(lat, lng),
-            radius: radius_m,
-            strokeWeight: 2,
-            strokeColor: "#16a34a",
-            strokeOpacity: 0.7,
-            strokeStyle: "dashed",
-            fillColor: "#16a34a",
-            fillOpacity: 0,
-          });
-        }
+        infraRawRef.current = items ?? [];
+        lastInfraKeyRef.current = key;
+        applyFromRaw();
       } catch (error) {
         console.error(error);
       }
@@ -776,8 +788,8 @@ export default function KakaoMap() {
       const regionKey = `${region.siDo}|${region.guGun}`;
       const sameRegion = lastAccidentRegionRef.current === regionKey;
 
-      // 같은 구 + raw 있음 → 타입 토글 등: 즉시 다시 그리기 (2초 없음)
-      if (sameRegion && accidentRawRef.current.length > 0) {
+      // 같은 구 → 타입 토글 등: 즉시 다시 그리기 (2초 없음)
+      if (sameRegion) {
         applyFromRaw(kakao, map, lat, lng);
         return;
       }
