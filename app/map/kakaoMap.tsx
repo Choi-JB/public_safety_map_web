@@ -788,8 +788,8 @@ export default function KakaoMap() {
       const regionKey = `${region.siDo}|${region.guGun}`;
       const sameRegion = lastAccidentRegionRef.current === regionKey;
 
-      // 같은 구 + raw 있음 → 타입 토글 등: 즉시 다시 그리기 (2초 없음)
-      if (sameRegion && accidentRawRef.current.length > 0) {
+      // 같은 구 → 타입 토글 등: 즉시 다시 그리기 (2초 없음)
+      if (sameRegion) {
         applyFromRaw(kakao, map, lat, lng);
         return;
       }
