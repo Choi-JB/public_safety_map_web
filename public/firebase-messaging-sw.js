@@ -1,0 +1,37 @@
+importScripts(
+    'https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js'
+  );
+  
+  importScripts(
+    'https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js'
+  );
+  
+  firebase.initializeApp({
+    apiKey: 'AIzaSyCyxDZUT8QhohczmoSR0dAEWW8QHtLSBk0',
+    authDomain: 'public-safety-map.firebaseapp.com',
+    projectId: 'public-safety-map',
+    storageBucket: 'public-safety-map.firebasestorage.app',
+    messagingSenderId: '872205545413',
+    appId: '1:872205545413:web:fed88af987041ac664a5ac',
+  });
+  
+  const messaging = firebase.messaging();
+  
+  /**
+   * 백그라운드 메시지 수신
+   */
+  messaging.onBackgroundMessage((payload) => {
+    console.log(
+      '[firebase-messaging-sw.js] Background message',
+      payload
+    );
+  
+    const title = payload.notification?.title ?? '알림';
+   
+    const options = {
+      body: payload.notification?.body ?? '',
+      icon: '/icon.png',
+    };
+  
+    self.registration.showNotification(title, options);
+  });
