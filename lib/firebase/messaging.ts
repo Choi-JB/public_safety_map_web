@@ -47,7 +47,7 @@ export function listenForegroundMessage() {
     const messaging = getMessaging(firebaseApp);
   
     return onMessage(messaging, (payload) => {
-      console.log('Foreground 메시지:', payload);
+      //console.log('Foreground 메시지:', payload);
   
       const title =
         payload.notification?.title ?? '알림';
