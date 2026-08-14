@@ -251,16 +251,64 @@
   background: #fff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   color: #243041;
-  overflow: hidden;
 }
 
 .userMenuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   padding: 14px 16px 12px;
+}
+
+.userMenuHeaderText {
+  min-width: 0;
+  flex: 1;
 }
 
 .userMenuName {
   font-size: 15px;
   font-weight: 700;
+}
+
+.userMenuAlarmWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.userMenuAlarmBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: default;
+  color: #9aa3ad;
+}
+
+.userMenuAlarmBtnOn {
+  color: #2f5d7c;
+}
+
+.userMenuAlarmTooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #374151;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
 .userMenuMeta {
@@ -288,6 +336,8 @@
   align-items: stretch;
   border-top: 1px solid #eee;
   border-bottom: 1px solid #eee;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
 }
 
 .userMenuAction {

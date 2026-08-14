@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = useAuthStore.persist.onFinishHydration(() => {
       setHydrated(true);
       const { authType, checkSession } = useAuthStore.getState();
-      if (authType !== "jwt") {
+      if (authType==="session") {
         void checkSession();
       }
     });
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (useAuthStore.persist.hasHydrated()) {
       setHydrated(true);
       const { authType, checkSession } = useAuthStore.getState();
-      if (authType !== "jwt") {
+      if (authType==="session") {
         void checkSession();
       }
     }
