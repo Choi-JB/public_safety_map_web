@@ -5,6 +5,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { loginApi, logoutApi, type LoginResult } from "@/lib/api/auth";
 import { fetchAdminMe } from "@/lib/api/admin";
+import { getFcmToken } from "@/lib/firebase/messaging";
+import { unregisterFcmToken } from "@/lib/api/notification";
 
 /** 유저 정보 */
 export type AuthUser = {
@@ -99,6 +101,11 @@ export const useAuthStore = create<AuthState>()(
        *  - 일반 유저: refresh token 폐기
        */
       try {
+        //fcm 토큰 폐기
+        const fcmToken = await getFcmToken(); // lib/firebase/messaging에서 import
+        if (fcmToken) {
+          await unregisterFcmToken(fcmToken).catch((err) => console.error("[unregisterFcmToken]", err));
+        }
         await logoutApi();
       } catch (err) {
         console.error("[logout]", err);
