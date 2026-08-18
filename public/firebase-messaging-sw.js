@@ -25,13 +25,24 @@ importScripts(
       '[firebase-messaging-sw.js] Background message',
       payload
     );
-  
-    const title = payload.notification?.title ?? '알림';
+
+    const data = JSON.stringify(payload.data);
+    const title = payload.data?.title ?? '알림';
    
-    const options = {
-      body: payload.notification?.body ?? '',
-      icon: '/icon.png',
+    let options = {
+      body: data.body ?? '',
     };
   
-    self.registration.showNotification(title, options);
+    const type = payload.data?.type ?? 'info';
+    switch (type) {
+      case 'report':
+        self.registration.showNotification(title, options);
+        break;
+      case 'warning':
+        options.icon = '/icon.png';
+        self.registration.showNotification(title, options);
+        break;
+    }
+    
+    //self.registration.showNotification(title, options);
   });

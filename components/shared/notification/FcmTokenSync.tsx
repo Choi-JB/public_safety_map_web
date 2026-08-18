@@ -62,6 +62,12 @@ export function FcmTokenSync() {
 
     (async () => {
       try {
+        //관리자일때만 fcm 토큰 등록
+        if (authType !== "session") {
+          lastSentRef.current = null;
+          return;
+        }
+
         const fcmToken = await getFcmToken();
         if (!fcmToken || cancelled) return;
 

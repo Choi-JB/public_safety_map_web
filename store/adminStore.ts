@@ -496,10 +496,18 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
 
   loadRecentActivity: async () => {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+    const today = now.toISOString().slice(0, 10);
     try {
       const [{ reports }, {feedbacks}] = await Promise.all([
-        fetchReports({ page: 1, limit: 5, filter: "active" }),
-        fetchFeedbacks({ page: 1, limit: 5, filter: "active" }),
+        fetchReports({ page: 1, limit: 5, filter: "active",
+          date_from: `${weekAgo} 00:00:00.000`,
+          date_to: `${today} 23:59:59.999`,}),
+        fetchFeedbacks({ page: 1, limit: 5, filter: "active",
+          date_from: `${weekAgo} 00:00:00.000`,
+          date_to: `${today} 23:59:59.999`,
+         }),
       ]);
       set({ recentReports: reports, recentFeedbacks: feedbacks });
     } catch (e) {

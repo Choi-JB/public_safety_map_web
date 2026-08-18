@@ -49,9 +49,16 @@ export function listenForegroundMessage() {
     return onMessage(messaging, (payload) => {
       //console.log('Foreground 메시지:', payload);
   
-      const title =
-        payload.notification?.title ?? '알림';
+      const type = payload.data?.type;
 
-      showNotificationToast(title);
+      switch (type) {
+        case 'report':
+          showNotificationToast('신규 제보 등록');
+          break;
+        case 'warning':
+          showNotificationToast('경고 알림');
+          break;
+      }
+
     });
   }
