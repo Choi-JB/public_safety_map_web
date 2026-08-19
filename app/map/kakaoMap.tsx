@@ -15,7 +15,13 @@ import type {
 } from "@/lib/api/types";
 
 import { loadKakaoMap } from "./loadkakaoMap";
-import { gridRectanglePath, isSafetyGrade, safetyGradeColor } from "./gridStyle";
+import {
+  gridRectanglePath,
+  gridTopRightCorner,
+  isSafetyGrade,
+  safetyGradeColor,
+  safetyGradeFlagColor,
+} from "./gridStyle";
 import { DEBUG_INFRA_RANGE_CIRCLE, levelToRadiusM } from "./infraRange";
 import {
   MARKER_COLORS,
@@ -368,19 +374,95 @@ export default function KakaoMap() {
       }
     };
 
-    const showHoverTag = (lat: number, lng: number, text: string) => {
+    const showHoverTag = (
+      lat: number,
+      lng: number,
+      text: string,
+      grade: "불안" | "보통"
+    ) => {
       if (hoverOverlayRef.current) {
         hoverOverlayRef.current.setMap(null);
       }
-      const content = document.createElement("div");
-      content.style.cssText =
-        "padding:4px 8px;background:#fff;border:1px solid #ccc;border-radius:4px;font-size:12px;white-space:nowrap;pointer-events:none;";
-      content.textContent = text;
+    
+      const corner = gridTopRightCorner(lat, lng);
+      const bg = safetyGradeFlagColor(grade);
+    
+      // 껍데기: 격자 안쪽 72px. 오른쪽 끝이 모서리
+      const wrap = document.createElement("div");
+      wrap.style.cssText = [
+        "position:relative",
+        "width:92px",
+        "height:37px",
+        "pointer-events:auto",
+        "overflow:visible",
+      ].join(";");
+    
+      const flag = document.createElement("div");
+      flag.style.cssText = [
+        "position:absolute",
+        "left:0",
+        "top:0",
+        "max-width:72px",
+        "padding:2px 12px",
+        `background:${bg}`,
+        "color:#1f2937",
+        "font-size:12px",
+        "font-weight:600",
+        "line-height:22px",
+        "white-space:nowrap",
+        "overflow:hidden",
+        "text-overflow:ellipsis",
+        "border-radius:1px",
+        "box-shadow:0 1px 2px rgba(0,0,0,0.15)",
+        "cursor:default",
+        "transition:max-width .12s ease",
+      ].join(";");
+      flag.textContent = text;
+    
+     
+
+      const expand = () => {
+        if(fullw <= collapseW) return;
+        flag.style.maxWidth = `${fullw}px`;
+        flag.style.overflow = "hidden";
+        flag.style.textOverflow = "clip";
+      };
+      const collapse = () => {
+        flag.style.maxWidth = `${collapseW}px`;
+        flag.style.textOverflow = "ellipsis";
+      };
+    
+      wrap.addEventListener("mouseenter", () => {
+        if (hoverTimerRef.current) {
+          clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = null;
+        }
+        expand();
+      });
+      wrap.addEventListener("mouseleave", () => {
+        collapse();
+        hideHoverTag();
+      });
+    
+      wrap.appendChild(flag);
       hoverOverlayRef.current = new kakao.maps.CustomOverlay({
         map,
-        position: new kakao.maps.LatLng(lat, lng),
-        content,
-        yAnchor: 1.4,
+        position: new kakao.maps.LatLng(corner.lat, corner.lng),
+        content: wrap,
+        xAnchor: 1,
+        yAnchor: 0,
+        zIndex: 10,
+      });
+
+      const collapseW = 72;
+      const fullw = flag.scrollWidth;
+    
+      hoverOverlayRef.current = new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(corner.lat, corner.lng),
+        content: wrap,
+        xAnchor: 1,
+        yAnchor: 0,
         zIndex: 10,
       });
     };
@@ -421,6 +503,7 @@ export default function KakaoMap() {
       if (g.safety_grade === "불안" || g.safety_grade === "보통") {
         const lat = g.lat;
         const lng = g.lng;
+        const grade = g.safety_grade;
 
         kakao.maps.event.addListener(polygon, "mouseover", () => {
           if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
@@ -428,7 +511,7 @@ export default function KakaoMap() {
           hoverTimerRef.current = setTimeout(async () => {
             const cached = tagCacheRef.current.get(g.grid_id);
             if (cached !== undefined) {
-              if (cached) showHoverTag(lat, lng, cached);
+              if (cached) showHoverTag(lat, lng, cached,grade);
               return;
             }
 
@@ -439,7 +522,7 @@ export default function KakaoMap() {
                 detail.top_tag ?? detail.tags[0]?.name ?? null;
               tagCacheRef.current.set(g.grid_id, top);
               if (reqId !== hoverReqIdRef.current) return;
-              if (top) showHoverTag(lat, lng, top);
+              if (top) showHoverTag(lat, lng, top, grade);
             } catch (error) {
               console.error(error);
             }
@@ -447,7 +530,10 @@ export default function KakaoMap() {
         });
 
         kakao.maps.event.addListener(polygon, "mouseout", () => {
-          hideHoverTag();
+          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = setTimeout(() => {
+            hideHoverTag();
+          }, 200);
         });
       }
 
