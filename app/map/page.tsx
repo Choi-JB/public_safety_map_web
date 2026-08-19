@@ -7,6 +7,7 @@ import CityEventsPanel from "./CityEventsPanel";
 import { ChatFab } from "@/components/chat/ChatFab";
 import { useAuthStore } from "@/store/authStore";
 
+
 export default function MapPage() {
   const selectedPlaceId = "room1";
   const authType = useAuthStore((s) => s.authType);
