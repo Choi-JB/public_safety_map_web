@@ -18,6 +18,21 @@ export function gridRectanglePath(lat: number, lng: number) {
   ]
 }
 
+/** 격자 오른쪽 위 모서리 (호버 태그 앵커용) */
+export function gridTopRightCorner(lat: number, lng: number) {
+  return { lat: lat + HALF, lng: lng + HALF }
+}
+
+/** 호버 플래그 배경색 (반투명) */
+export function safetyGradeFlagColor(grade: "불안" | "보통"): string {
+  switch (grade) {
+    case "불안":
+      return "rgba(239, 68, 68, 0.72)"
+    case "보통":
+      return "rgba(234, 179, 8, 0.72)"
+  }
+}
+
 export function safetyGradeColor(grade: string | null): string {
   switch (grade) {
     case "안전":
