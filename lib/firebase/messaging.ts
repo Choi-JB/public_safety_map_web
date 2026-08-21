@@ -47,7 +47,7 @@ export function listenForegroundMessage() {
     const messaging = getMessaging(firebaseApp);
   
     return onMessage(messaging, (payload) => {
-      //console.log('Foreground 메시지:', payload);
+      console.log('Foreground 메시지:', payload);
   
       const type = payload.data?.type;
 
@@ -58,6 +58,8 @@ export function listenForegroundMessage() {
         case 'warning':
           showNotificationToast('경고 알림');
           break;
+        default:
+          showNotificationToast('새로운 제보가 등록되었습니다.'); 
       }
 
     });
