@@ -104,14 +104,14 @@ export function ChangePasswordForm({
     setLoading(true);
     try {
       if (onSubmitPassword) {
-        await onSubmitPassword({ currentPassword, newPassword });
+        //await onSubmitPassword({ currentPassword, newPassword });
         onSuccess?.("비밀번호가 변경되었습니다.");
       } else {
-        await changePassword({
-          email,
-          password: currentPassword,
-          newPassword,
-        });
+        // await changePassword({
+        //   email,
+        //   password: currentPassword,
+        //   newPassword,
+        // });
         onSuccess?.("비밀번호가 변경되었습니다.");
       }
     } catch (err) {

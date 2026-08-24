@@ -19,7 +19,7 @@ export function SettingPanel() {
             showBrand={false}
             onCancel={() => setChangingPassword(false)}
             onSuccess={(message) => {
-              setSuccessMessage(message ?? "비밀번호가 변경되었습니다.");
+              setSuccessMessage(message ?? "Demo 버전에서는 비밀번호 변경이 불가능합니다.");
               setChangingPassword(false);
             }}
           />
