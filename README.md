@@ -1,119 +1,177 @@
-# Public Safety Map — Frontend (web)
+# 치안 안전 지도 (WEB version)
 
-## (1) 실행 방법
+공공데이터로는 알 수 없는 체감 안전도를, 실시간 제보와 평가로 채운 치안 정보 지도 서비스입니다.
 
-```
+[일반 사용자 웹페이지] · [관리자 페이지]
+
+---
+
+## 개요 Description
+
+웹 버전은 앱에서 제공하는 기능을 간단히 확인하고, 내가 남긴 제보·피드백을 조회하는 화면입니다.
+
+관리자는 관리자 페이지에서 실시간 유저 제보·피드백을 확인하고, 지도에 표시할 마커를 등록하거나 숨기며, 유저와 실시간 채팅할 수 있습니다.
+
+---
+
+## DEMO
+
+[웹 페이지 스크린샷]
+
+[배포 링크]
+
+---
+
+## 주요 기능 Main Feature
+
+### 로그인
+
+- **일반 사용자**: JWT (Access Token + Refresh Token)
+- **관리자**: Session  
+  서버에 session id를 저장해, 같은 관리자 계정으로 다른 기기에서 로그인하면 현재 기기는 자동 로그아웃됩니다.
+
+### 일반 사용자
+
+- 격자 기반 안전지도 열람
+- 내가 올린 제보·피드백 확인
+
+### 관리자
+
+- 실시간 유저 제보 확인
+- 지도에 표시할 마커 등록 / 숨김
+- 일반 사용자와 실시간 채팅
+
+---
+
+## 실행 방법 Getting Started
+
+```bash
 1. npm install
-2. .env.example을 복사해 .env.local 생성 후 NEXT_PUBLIC_API_BASE_URL 값 채우기 (백엔드 주소, 예: http://localhost:4100)
+2. .env.example을 복사해 .env.local 생성 후 값 채우기
 3. npm run dev
-4. http://localhost:3000 접속 확인
+4. http://localhost:3000 접속
 ```
+
+필수 환경 변수
+
+| 변수 | 설명 |
+| :--- | :--- |
+| `NEXT_PUBLIC_API_BASE_URL` | 백엔드 주소 (예: `http://localhost:4100`) |
+| `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` | 카카오맵 JavaScript 키 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL (채팅) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (채팅) |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase 웹 앱 설정 (알림) |
+| `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | FCM 웹 푸시 VAPID 키 |
 
 주요 경로
+
+- 지도: `http://localhost:3000/map`
 - 로그인: `http://localhost:3000/login`
 - 회원가입: `http://localhost:3000/signup`
-- 지도: `http://localhost:3000/map`
+- 마이페이지: `http://localhost:3000/mypage/main`
 - 관리자: `http://localhost:3000/admin`
 
-## (2) 폴더 구조
+---
 
-대표 폴더 주석: `공통` / `제보·피드백·관리자`  
-파일 주석: 해당 파일의 용도
+## 기술 스택 Stack
+
+- **Next.js** — 웹 프론트엔드
+- **Supabase** — 채팅 DB · 실시간 메시지
+- **Firebase Cloud Messaging** — 관리자 알림
+- Kakao Maps JS SDK — 지도 렌더링
+- Zustand — 인증·지도·관리자 상태
+
+---
+
+## 프로젝트 구조 Project Structure
 
 ```
-web/
+frontend/
 ├── app/
-│   ├── layout.tsx                      # 루트 레이아웃 · AuthProvider
+│   ├── layout.tsx                      # 루트 레이아웃 · AuthProvider · FCM
 │   ├── page.tsx                        # / → /map 리다이렉트
-│   ├── login/page.tsx                  # 로그인 페이지
-│   ├── signup/page.tsx                 # 회원가입 페이지
-│   ├── map/                            # 공통 — 사용자 지도 화면
-│   │   ├── page.tsx                    # 지도 페이지 진입점
-│   │   ├── kakaoMap.tsx                # 카카오맵 렌더 · 격자/인프라
-│   │   ├── loadkakaoMap.ts             # 카카오맵 SDK 로드
-│   │   ├── MapControls.tsx             # 검색 · 내 위치 · 주변/격자 토글
-│   │   ├── CityEventsPanel.tsx         # 지도 사이드 도시정보/격자 패널
-│   │   ├── CityEventsPanel.module.css  # 사이드 패널 스타일
-│   │   ├── gridStyle.ts                # 안전등급 색 · 격자 스타일
-│   │   ├── infraRange.ts               # 인프라 표시 범위 상수
-│   │   └── kakao.d.ts                  # 카카오맵 타입 선언
-│   ├── reports/page.tsx                # 제보 페이지 (플레이스홀더)
-│   ├── feedbacks/page.tsx              # 피드백 페이지 (플레이스홀더)
-│   └── admin/page.tsx                  # 관리자 페이지 진입 · 권한 가드
-├── store/
-│   ├── authStore.ts                    # 공통 — 로그인/로그아웃 · JWT·세션
-│   ├── mapStore.ts                     # 공통 — 지도 bounds · 격자/인프라 상태
-│   ├── reportStore.ts                  # 제보 도메인 상태
-│   ├── feedbackStore.ts                # 피드백 도메인 상태
-│   └── adminStore.ts                   # 제보·피드백·관리자 — 관리자 필터·목록·등록
+│   ├── login/page.tsx                  # 로그인
+│   ├── signup/page.tsx                 # 회원가입
+│   ├── map/                            # 일반 사용자 지도
+│   │   ├── page.tsx                    # 지도 진입점
+│   │   ├── kakaoMap.tsx                # 카카오맵 · 격자/인프라/제보
+│   │   ├── MapControls.tsx             # 검색 · 내 위치 · 레이어 토글
+│   │   └── CityEventsPanel.tsx         # 격자·도시정보 사이드 패널
+│   ├── mypage/
+│   │   ├── main/page.tsx               # 내 제보·피드백
+│   │   └── password/page.tsx           # 비밀번호 변경
+│   └── admin/page.tsx                  # 관리자 페이지 · 권한 가드
 ├── components/
-│   ├── shared/                         # 공통
-│   │   └── AuthProvider.tsx            # 인증 상태 하이드레이션
-│   ├── login/                          # 공통 — 로그인 UI
-│   │   ├── AuthEntry.tsx               # 지도 상단 로그인/유저 메뉴 진입
-│   │   ├── LoginButton.tsx             # 로그인 버튼
-│   │   ├── UserMenu.tsx                # 로그인 유저 메뉴
-│   │   ├── LoginShell.tsx              # 로그인 페이지 셸
-│   │   ├── LoginForm.tsx               # 로그인 폼
-│   │   └── login.module.css            # 로그인/회원가입 공통 스타일
-│   ├── signup/                         # 공통 — 회원가입 UI
-│   │   ├── SignupShell.tsx             # 회원가입 페이지 셸
-│   │   └── SignupForm.tsx              # 회원가입 폼
-│   └── admin/                          # 제보·피드백·관리자
-│       ├── AdminShell.tsx              # 관리자 레이아웃 · 탭 라우팅
-│       ├── admin.module.css            # 관리자 UI 스타일
-│       ├── layout/
-│       │   ├── AdminTopbar.tsx         # 상단 탭 · 유저 정보
-│       │   └── AdminMapPanel.tsx       # 왼쪽 지도 영역
-│       ├── panels/
-│       │   ├── DashboardPanel.tsx      # 대시보드 요약
-│       │   ├── ReportsPanel.tsx        # 제보 목록 · 필터 · 삭제/복구
-│       │   ├── FeedbacksPanel.tsx      # 피드백 목록 · 필터 · 삭제
-│       │   ├── CityEventsPanel.tsx     # 도시정보 목록 · 상태/기간 필터
-│       │   └── markers/
-│       │       ├── MarkersPanel.tsx    # 마커 등록 탭 전환
-│       │       ├── ReportMarkerForm.tsx      # 제보 마커 등록 폼
-│       │       └── CityEventMarkerForm.tsx   # 도시정보 마커 등록 폼
-│       ├── modals/
-│       │   ├── DeleteConfirmModal.tsx  # 삭제 확인
-│       │   ├── RestoreConfirmModal.tsx # 복구 확인
-│       │   ├── ImagePreviewModal.tsx   # 첨부 이미지 크게 보기
-│       │   ├── CityEventModal.tsx      # 도시정보 상세/수정
-│       │   └── DetailModals.tsx        # 제보·피드백 상세
-│       └── shared/
-│           ├── AdminMap.tsx            # 관리자용 카카오맵
-│           ├── FilterChecks.tsx        # 기간 프리셋 · 활성여부 체크
-│           ├── SearchQueryField.tsx    # 유저(닉네임)/키워드 검색 입력
-│           ├── AuthorNicknameMenu.tsx  # 작성자 닉네임 · 작성글 검색 메뉴
-│           ├── Pagination.tsx          # 목록 페이지네이션
-│           ├── MapMoveButton.tsx       # 목록 → 지도 포커스 이동
-│           ├── SafetyBadge.tsx         # 체감안전도 배지
-│           ├── formatDate.ts           # 날짜 표시 포맷
-│           ├── ScheduleRow.tsx         # 날짜/시간 입력 · DateInput
-│           ├── ImageAttachField.tsx    # 이미지 첨부 · 리사이즈 미리보기
-│           ├── CloseIcon.tsx
-│           ├── RefreshIcon.tsx
-│           ├── RestoreIcon.tsx
-│           ├── BackIcon.tsx
-│           └── TrashIcon.tsx
+│   ├── login/                          # 로그인 UI · 유저 메뉴
+│   ├── signup/                         # 회원가입 UI
+│   ├── myPage/                         # 마이페이지 UI
+│   ├── chat/                           # 사용자 채팅 FAB · 패널
+│   ├── admin/                          # 관리자 셸 · 탭 · 패널
+│   └── shared/
+│       ├── AuthProvider.tsx            # 인증 하이드레이션
+│       └── notification/               # FCM 토큰 동기화 · 토스트
+├── store/
+│   ├── authStore.ts                    # 로그인/로그아웃 · JWT · 세션
+│   ├── mapStore.ts                     # 지도 bounds · 격자/인프라
+│   └── adminStore.ts                   # 관리자 탭 · 목록 · 등록
 ├── lib/
-│   ├── api/                            # 공통 — API 클라이언트
+│   ├── api/                            # 백엔드 API 클라이언트
 │   │   ├── client.ts                   # fetch 래퍼 · 토큰 갱신
-│   │   ├── types.ts                    # 공통 응답/도메인 타입
-│   │   ├── auth.ts                     # 로그인 · 회원가입 · 로그아웃 API
-│   │   ├── admin.ts                    # 관리자 목록/등록/삭제/복구 API
-│   │   └── upload.ts                   # 이미지 업로드 API
-│   └── utils/
-│       └── imageResize.ts              # 업로드 전 이미지 리사이즈
+│   │   ├── auth.ts                     # 로그인 · 회원가입 · 로그아웃
+│   │   ├── admin.ts                    # 관리자 CRUD
+│   │   ├── mypage.ts                   # 내 제보·피드백
+│   │   └── notification.ts             # FCM 토큰 등록/해제
+│   ├── chat/                           # Supabase 채팅
+│   ├── firebase/                       # FCM 설정 · 포그라운드 수신
+│   └── supabase/                       # Supabase 클라이언트
+├── public/
+│   ├── firebase-messaging-sw.js        # FCM 서비스 워커
+│   └── markers/                        # 지도 마커 이미지
 ├── .env.example
-├── .gitignore
-├── next.config.ts
-├── tsconfig.json
-├── README.md
 └── package.json
 ```
 
-## (3) 협업 규칙
+---
 
-- `공통` 영역(`app/layout.tsx`, `lib/api/client.ts`, `lib/api/types.ts`, `lib/api/auth.ts`, `store/authStore.ts`, `components/shared` 등) 수정이 필요하면 관련 작업자와 먼저 맞춰 주세요.
-- 관리자 UI·API(`components/admin`, `store/adminStore.ts`, `lib/api/admin.ts`)는 제보·피드백·관리자 기능과 함께 변경되는 경우가 많습니다.
+## 아키텍처 구조도 Architecture
+
+```mermaid
+flowchart LR
+  subgraph Web["Web (Next.js)"]
+    User["일반 사용자 /map, /mypage"]
+    Admin["관리자 /admin"]
+  end
+
+  Kakao["Kakao Maps"]
+  BE["Backend API"]
+  DB[("MySQL")]
+  SB["Supabase\n채팅"]
+  FCM["Firebase Cloud Messaging"]
+
+  User --> Kakao
+  Admin --> Kakao
+  User -->|"JWT Access / Refresh"| BE
+  Admin -->|"Session cookie"| BE
+  BE --> DB
+  User --> SB
+  Admin --> SB
+  Admin -->|"FCM 토큰 등록"| BE
+  BE --> FCM
+  FCM -->|"신규 제보 알림"| Admin
+```
+
+- 일반 사용자: Access Token은 메모리/스토어, Refresh Token은 httpOnly 쿠키. 만료 시 `/auth/refresh`로 재발급.
+- 관리자: 세션 쿠키로 인증. 동일 계정 재로그인 시 기존 세션은 서버에서 만료.
+- 채팅: 백엔드를 거치지 않고 Supabase `chat_rooms` / `messages`에 직접 연동.
+- 알림: 관리자 로그인 + 브라우저 알림 허용 시 FCM 토큰을 서버에 등록하고, 포그라운드에서는 토스트로 표시.
+
+---
+
+## 본인 역할 Role & Contribution
+
+- 로그인 (일반 사용자 JWT / 관리자 Session)
+- 관리자 페이지
+- 알림 기능 (Firebase Cloud Messaging)
+
+---
+
