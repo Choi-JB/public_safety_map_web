@@ -2,7 +2,9 @@
 
 공공데이터로는 알 수 없는 체감 안전도를, 실시간 제보와 평가로 채운 치안 정보 지도 서비스입니다.
 
-[일반 사용자 웹페이지] · [관리자 페이지]
+![웹 페이지 스크린샷](./docs/images/map.png)
+
+![관리자 페이지](docs/images/admin.png)
 
 ---
 
@@ -16,11 +18,16 @@
 
 ## DEMO
 
-![웹 페이지 스크린샷](./docs/images/map.png)
-
-![관리자 페이지](docs/images/admin.png)
-
 [데모 링크](https://public-safety-map-web.vercel.app)
+
+테스트 가능 아이디
+- 일반 사용자
+id:test1
+pw:1234
+
+- 관리자 (로그인 후 내 정보에서 관리자 페이지 진입가능)
+id:admin
+pw:1234
 
 ---
 
@@ -70,7 +77,6 @@
 - 지도: `http://localhost:3000/map`
 - 로그인: `http://localhost:3000/login`
 - 회원가입: `http://localhost:3000/signup`
-- 마이페이지: `http://localhost:3000/mypage/main`
 - 관리자: `http://localhost:3000/admin`
 
 ---
@@ -171,7 +177,7 @@ flowchart LR
 
 ## 본인 역할 Role & Contribution
 
-- 로그인 (일반 사용자 JWT / 관리자 Session)
+- 로그인 인증 (일반 사용자 JWT / 관리자 Session)
 - 관리자 페이지
 - 알림 기능 (Firebase Cloud Messaging)
 
