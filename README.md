@@ -81,6 +81,21 @@ pw:1234
 
 ---
 
+### Firebase 알림 (FCM) 설정
+
+알림을 쓰려면 Firebase 웹 앱 설정이 필요합니다.
+`public/firebase-messaging-sw.js`는 키를 포함하므로 git에 올리지 않습니다.
+
+1. [Firebase Console](https://console.firebase.google.com) → 프로젝트 → 프로젝트 설정 → 일반
+2. 웹 앱 설정에서 apiKey, authDomain, projectId 등 복사
+3. `.env.example`을 복사해 `.env.local` 만든 뒤 `NEXT_PUBLIC_FIREBASE_*` / `VAPID_KEY` 채우기
+   - VAPID 키: 프로젝트 설정 → Cloud Messaging → Web Push certificates
+4. 서비스 워커 파일 생성
+   ```bash
+   cp public/firebase-messaging-sw.js.example public/firebase-messaging-sw.js
+
+---
+
 ## 기술 스택 Stack
 
 - **Next.js** — 웹 프론트엔드
