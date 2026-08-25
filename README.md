@@ -20,14 +20,20 @@
 
 [데모 링크](https://public-safety-map-web.vercel.app)
 
+<video controls width="100%">
+  <source src="./docs/videos/demo.webm" type="video/webm" />
+</video>
+
 테스트 가능 아이디
 - 일반 사용자
+
 | | |
 |---|---|
 | id | `test1` |
 | pw | `1234` |
 
 - 관리자 (로그인 후 내 정보에서 관리자 페이지 진입가능)
+
 | | |
 |---|---|
 | id | `admin` |
@@ -54,9 +60,6 @@
 - 지도에 표시할 마커 등록 / 숨김
 - 일반 사용자와 실시간 채팅
 
-<video controls width="100%">
-  <source src="./docs/videos/demo.webm" type="video/webm" />
-</video>
 
 ---
 
