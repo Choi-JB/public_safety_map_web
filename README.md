@@ -45,7 +45,6 @@
 
 - **일반 사용자**: JWT (Access Token + Refresh Token)
 - **관리자**: Session  
-  서버에 session id를 저장해, 같은 관리자 계정으로 다른 기기에서 로그인하면 현재 기기는 자동 로그아웃됩니다.
 
 ### 일반 사용자
 
