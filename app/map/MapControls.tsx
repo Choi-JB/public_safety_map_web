@@ -45,13 +45,17 @@ function accidentColorDot(type: AccidentZoneType) {
   }
 }
 
+/** 레이어가 실제로 표시 중인지 (마스터 ON + 선택 항목 ≥ 1) */
+function isLayerActive(visible: boolean, selectedCount: number) {
+  return visible && selectedCount > 0;
+}
+
 function accidentChipLabel(
   visible: boolean,
   types: AccidentZoneType[]
 ) {
-  if (!visible) return "위험구간 · 숨김";
+  if (!isLayerActive(visible, types.length)) return "위험구간";
   if (types.length === ACCIDENT_ZONE_TYPES.length) return "위험구간";
-  if (types.length === 0) return "위험구간 · 없음";
   if (types.length === 1) return `위험구간 · ${ACCIDENT_ZONE_LABEL[types[0]]}`;
   return `위험구간 · ${types.length}종`;
 }
@@ -60,9 +64,8 @@ function nearbyChipLabel(
   infraVisible: boolean,
   visibleInfraTypes: InfraType[]
 ) {
-  if (!infraVisible) return "주변 · 숨김";
+  if (!isLayerActive(infraVisible, visibleInfraTypes.length)) return "주변";
   if (visibleInfraTypes.length === INFRA_TYPES.length) return "주변";
-  if (visibleInfraTypes.length === 0) return "주변 · 없음";
   if (visibleInfraTypes.length === 1) return `주변 · ${visibleInfraTypes[0]}`;
   return `주변 · ${visibleInfraTypes.length}종`;
 }
@@ -71,12 +74,16 @@ function gridChipLabel(
   gridsVisible: boolean,
   visibleGrades: SafetyGrade[]
 ) {
-  if (!gridsVisible) return "격자 · 숨김";
+  if (!isLayerActive(gridsVisible, visibleGrades.length)) return "격자";
   if (visibleGrades.length === SAFETY_GRADES.length) return "격자";
-  if (visibleGrades.length === 0) return "격자 · 없음";
   if (visibleGrades.length === 1) return `격자 · ${visibleGrades[0]}`;
   return `격자 · ${visibleGrades.length}종`;
 }
+
+const chipActiveStyle: CSSProperties = {
+  border: "1px solid #2563eb",
+  background: "#eff6ff",
+};
 
 /** 분리된 칩(카드) 공통 스타일 */
 const chipStyle: CSSProperties = {
@@ -170,6 +177,12 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
       (sidePanelOpen ? SIDE_DETAIL_WIDTH : 0) +
       SIDE_PANEL_GAP;
 
+  const nearbyActive = isLayerActive(infraVisible, visibleInfraTypes.length);
+  const gridActive = isLayerActive(gridsVisible, visibleGrades.length);
+  const accidentActive = isLayerActive(
+    accidentZonesVisible,
+    visibleAccidentTypes.length
+  );
 
   return (
     <div
@@ -294,8 +307,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
             aria-expanded={nearbyOpen}
             style={{
               ...actionBtnStyle,
-              border: nearbyOpen ? "1px solid #2563eb" : actionBtnStyle.border,
-              background: nearbyOpen ? "#eff6ff" : "#fff",
+              ...(nearbyActive ? chipActiveStyle : null),
             }}
           >
             {nearbyChipLabel(infraVisible, visibleInfraTypes)}
@@ -404,8 +416,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
             aria-expanded={gridOpen}
             style={{
               ...actionBtnStyle,
-              border: gridOpen ? "1px solid #2563eb" : actionBtnStyle.border,
-              background: gridOpen ? "#eff6ff" : "#fff",
+              ...(gridActive ? chipActiveStyle : null),
             }}
           >
             {gridChipLabel(gridsVisible, visibleGrades)}
@@ -513,8 +524,7 @@ export default function MapControls({ adminMode = false }: MapControlsProps) {
             aria-expanded={accidentOpen}
             style={{
               ...actionBtnStyle,
-              border: accidentOpen ? "1px solid #2563eb" : actionBtnStyle.border,
-              background: accidentOpen ? "#eff6ff" : "#fff",
+              ...(accidentActive ? chipActiveStyle : null),
             }}
           >
             {accidentChipLabel(accidentZonesVisible, visibleAccidentTypes)}

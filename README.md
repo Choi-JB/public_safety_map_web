@@ -20,9 +20,7 @@
 
 [데모 링크](https://public-safety-map-web.vercel.app)
 
-<video controls width="100%">
-  <source src="./docs/videos/demo.webm" type="video/webm" />
-</video>
+[demo.webm](https://github.com/user-attachments/assets/d4133186-0006-4605-af1f-54546d93b376)
 
 테스트 가능 아이디
 - 일반 사용자
