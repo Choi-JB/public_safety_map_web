@@ -34,20 +34,43 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return undefined as T;
 }
 
+/** refresh 1회 호출. 실패 시 상태 코드를 돌려줘서 재시도 여부를 판단할 수 있게 함 */
+async function callRefresh(): Promise<{ token: string } | { status: number }> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) return { status: res.status };
+    const json = await res.json();
+    const token = json?.data?.access_token;
+    return typeof token === "string" ? { token } : { status: res.status };
+  } catch {
+    return { status: 0 }; // 네트워크 오류
+  }
+}
+
 /** access token 만료 시, refresh token(httpOnly 쿠키)으로 새 access token 조용히 재발급 */
 async function refreshAccessToken(): Promise<string | null> {
   //동시 요청 방지
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await parseResponse<{ access_token: string }>(res);
-      useAuthStore.setState({ accessToken: data.access_token });
-      return data.access_token;
-    } catch {
+      let result = await callRefresh();
+
+      // 401이면 다른 탭이 방금 먼저 갱신했을 수 있음 → 새 쿠키가 자리잡길 잠깐 기다렸다 재시도
+      for (const delay of [500, 1000]) {
+        if ("token" in result || result.status !== 401) break;
+        await new Promise((r) => setTimeout(r, delay));
+        result = await callRefresh();
+      }
+
+      if ("token" in result) {
+        useAuthStore.setState({ accessToken: result.token });
+        return result.token;
+      }
+
+      // 재시도까지 실패해야 진짜 만료로 보고 로그인 상태 초기화
       useAuthStore.setState({
         user: null,
         accessToken: null,
